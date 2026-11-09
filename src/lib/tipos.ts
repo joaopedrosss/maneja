@@ -52,7 +52,7 @@ export interface PrevisaoClima {
   dias: PrevisaoDia[]; // 7 dias, a partir de hoje
 }
 
-export type StatusMovimentacao = "pendente" | "realizada" | "recusada";
+export type StatusMovimentacao = "pendente" | "aceita" | "recusada" | "trocada";
 
 export interface Movimentacao {
   id: string;
@@ -68,7 +68,8 @@ export interface Movimentacao {
   confianca: Confianca;
   motivo_confianca: string;
   status: StatusMovimentacao;
-  destino_trocado: boolean; // o técnico escolheu outro piquete
+  destino_trocado: boolean; // foi escolhido outro piquete no lugar do recomendado
+  destino_recomendado_nome: string;
 }
 
 export type TipoAlerta =

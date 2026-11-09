@@ -31,6 +31,7 @@
 .plano-escolha { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--cor-borda); }
 .plano-escolha .campo-entrada { max-width: 480px; }
 .plano-movimento-feito { border-left-color: var(--cor-ocupado); }
+.plano-movimento-recusado { border-left-color: var(--cor-texto-suave); }
 .plano-feito { margin-top: 14px !important; }
 .plano-feito a { color: inherit; font-weight: 600; }
 .aviso-alerta a, .aviso-info a { color: inherit; font-weight: 600; }

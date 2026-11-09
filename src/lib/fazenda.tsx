@@ -4,8 +4,10 @@ import { gerarRecomendacao } from "./agente";
 import { hojeNaFazenda } from "./datas";
 import { baseInicial, USUARIO, type Base } from "./demo";
 import { areaHa } from "./geo";
+import { ultimaLeitura } from "./ndvi";
 import { lotacaoDe, totalAnimais } from "./rebanho";
-import type { Fazenda, GeoJsonPolygon, PlanoManejo, Rebanho } from "./tipos";
+import { validarMovimento } from "./regras";
+import type { Fazenda, GeoJsonPolygon, Movimentacao, PlanoManejo, Rebanho } from "./tipos";
 
 export interface EstadoDemo extends Base {
   planos: Record<string, PlanoManejo>; // fazenda_id → plano atual
@@ -33,6 +35,7 @@ interface Contexto {
   gerarPlano: () => Promise<PlanoManejo>;
   salvarLotacao: (piqueteId: string, rebanho: Rebanho) => void;
   executarMovimentacao: (movimentacaoId: string, destinoId?: string) => string | null;
+  recusarMovimentacao: (movimentacaoId: string) => void;
 }
 
 const ContextoFazenda = createContext<Contexto | null>(null);
@@ -52,6 +55,10 @@ function recomendar(base: Base, fazendaId: string, hoje: string, agora?: Date): 
     hoje,
     agora,
   );
+}
+
+function comMovimentacao(plano: PlanoManejo, mov: Movimentacao): PlanoManejo {
+  return { ...plano, movimentacoes: plano.movimentacoes.map((m) => (m.id === mov.id ? mov : m)) };
 }
 
 function estadoInicial(): EstadoDemo {
@@ -148,34 +155,44 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     const plano = e.planos[fazendaId];
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
     if (!plano || !mov) return "Movimentação não encontrada.";
-    const destino = e.piquetes.find((p) => p.id === (destinoId ?? mov.piquete_destino_id));
-    if (!destino) return "Piquete de destino não existe mais.";
     const origem = lotacaoDe(e.lotacao, mov.piquete_origem_id);
     if (!origem) return "O piquete de origem está sem animais. Gere um novo plano.";
-    if (lotacaoDe(e.lotacao, destino.id)) return `${destino.nome} já está ocupado.`;
 
+    const destinoFinal = destinoId ?? mov.piquete_destino_id;
+    const rebanho = { bois: origem.bois, vacas: origem.vacas, bezerros: origem.bezerros };
+    const falhas = validarMovimento(destinoFinal, rebanho, { piquetes: e.piquetes, ndvi: e.ndvi, lotacao: e.lotacao, hoje });
+    if (falhas.length > 0) return `Não dá para mover: ${falhas.join("; ")}.`;
+
+    const destino = e.piquetes.find((p) => p.id === destinoFinal)!;
+    const trocado = destino.id !== mov.piquete_destino_id;
+    const registrada: Movimentacao = {
+      ...mov,
+      rebanho,
+      status: trocado ? "trocada" : "aceita",
+      destino_trocado: trocado,
+      piquete_destino_id: destino.id,
+      piquete_destino_nome: destino.nome,
+      ndvi_destino: ultimaLeitura(e.ndvi, destino.id, hoje)!.valor,
+    };
     alterar((s) => ({
       ...s,
       lotacao: s.lotacao.map((l) => (l === origem ? { ...l, piquete_id: destino.id, desde: hoje } : l)),
-      planos: {
-        ...s.planos,
-        [fazendaId]: {
-          ...plano,
-          movimentacoes: plano.movimentacoes.map((m) =>
-            m.id === mov.id
-              ? {
-                  ...m,
-                  status: "realizada",
-                  destino_trocado: destino.id !== mov.piquete_destino_id,
-                  piquete_destino_id: destino.id,
-                  piquete_destino_nome: destino.nome,
-                }
-              : m,
-          ),
-        },
-      },
+      historico: [{ ...registrada, data: hoje }, ...s.historico],
+      planos: { ...s.planos, [fazendaId]: comMovimentacao(plano, registrada) },
     }));
     return null;
+  }
+
+  function recusarMovimentacao(movimentacaoId: string): void {
+    const plano = atual.current.planos[fazendaId];
+    const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
+    if (!plano || !mov) return;
+    const recusada: Movimentacao = { ...mov, status: "recusada" };
+    alterar((s) => ({
+      ...s,
+      historico: [{ ...recusada, data: hoje }, ...s.historico],
+      planos: { ...s.planos, [fazendaId]: comMovimentacao(plano, recusada) },
+    }));
   }
 
   return (
@@ -194,6 +211,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
         gerarPlano,
         salvarLotacao,
         executarMovimentacao,
+        recusarMovimentacao,
       }}
     >
       {children}

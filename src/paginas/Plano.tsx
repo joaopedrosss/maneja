@@ -5,7 +5,8 @@ import { CHUVA_FORTE_MM, resumoClima } from "../lib/clima";
 import { dataComDia, decimal, fimDoPlano } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
 import { resumoPiquetes } from "../lib/ndvi";
-import { descreverRebanho, totalAnimais } from "../lib/rebanho";
+import { descreverRebanho, lotacaoDe, totalAnimais } from "../lib/rebanho";
+import { validarMovimento } from "../lib/regras";
 import type { Confianca, Fazenda, Movimentacao, PlanoManejo, PrevisaoClima, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
@@ -27,15 +28,17 @@ function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[
 // ---------- uma recomendação de movimentação ----------
 
 function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boolean }) {
-  const { estado, fazenda, hoje, executarMovimentacao } = useFazenda();
+  const { estado, fazenda, hoje, executarMovimentacao, recusarMovimentacao } = useFazenda();
   const [escolhendo, setEscolhendo] = useState(false);
   const [destino, setDestino] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
+  // só aparecem os piquetes que passam nas mesmas regras da recomendação
+  const dados = { piquetes: estado.piquetes, ndvi: estado.ndvi, lotacao: estado.lotacao, hoje };
   const opcoes = fazenda
     ? resumoPiquetes(estado.piquetes.filter((p) => p.fazenda_id === fazenda.id), estado.ndvi, estado.lotacao, hoje)
-        .filter((r) => r.situacao === "descansando" && r.ndvi !== null)
         .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== mov.piquete_origem_id)
+        .filter((r) => validarMovimento(r.piquete_id, lotacaoDe(estado.lotacao, mov.piquete_origem_id) ?? mov.rebanho, dados).length === 0)
         .sort((a, b) => b.ndvi! - a.ndvi!)
     : [];
 
@@ -46,10 +49,11 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
     else setEscolhendo(false);
   }
 
-  const realizada = mov.status === "realizada";
+  const realizada = mov.status === "aceita" || mov.status === "trocada";
+  const recusada = mov.status === "recusada";
 
   return (
-    <article className={realizada ? "cartao plano-movimento plano-movimento-feito" : "cartao plano-movimento"}>
+    <article className={`cartao plano-movimento${realizada ? " plano-movimento-feito" : ""}${recusada ? " plano-movimento-recusado" : ""}`}>
       <div className="plano-movimento-topo">
         <h4 className="cartao-titulo">
           Mover {totalAnimais(mov.rebanho)} animais: {mov.piquete_origem_nome}{" "}
@@ -67,7 +71,11 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
       {realizada ? (
         <p className="aviso-info plano-feito" role="status">
           Movimentação registrada ✓ — o rebanho está no {mov.piquete_destino_nome} desde hoje
-          {mov.destino_trocado ? " (piquete escolhido pelo técnico)" : ""}. <Link to="/mapa">Ver no mapa</Link>
+          {mov.destino_trocado ? ` (no lugar do ${mov.destino_recomendado_nome}, recomendado)` : ""}. <Link to="/mapa">Ver no mapa</Link>
+        </p>
+      ) : recusada ? (
+        <p className="aviso-alerta plano-feito" role="status">
+          Recomendação recusada. Gere um novo plano para ver outra sugestão.
         </p>
       ) : escolhendo ? (
         <div className="plano-escolha">
@@ -82,7 +90,7 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
               ))}
             </select>
           </label>
-          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete livre com leitura de NDVI.</p> : null}
+          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete apto a receber este rebanho.</p> : null}
           <div className="formulario-acoes">
             <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => confirmar(destino)}>
               Confirmar com este piquete
@@ -99,6 +107,9 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
           </button>
           <button className="botao botao-secundario" disabled={bloqueado} onClick={() => setEscolhendo(true)}>
             Escolher outro piquete
+          </button>
+          <button className="botao botao-secundario" disabled={bloqueado} onClick={() => recusarMovimentacao(mov.id)}>
+            Recusar
           </button>
         </div>
       )}

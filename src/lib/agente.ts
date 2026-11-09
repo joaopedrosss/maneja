@@ -122,6 +122,7 @@ export function gerarRecomendacao(
       motivo_confianca: `${motivoConfianca(leitura(destino.id), hoje)} no destino`,
       status: "pendente",
       destino_trocado: false,
+      destino_recomendado_nome: destino.nome,
     });
     lotacaoPrevista = [...lotacaoPrevista, { ...l, piquete_id: destino.id }];
   }
