@@ -76,8 +76,7 @@ export default function Rebanho() {
       {piquetes.map((p, i) => {
         const l = lotacoes[i];
         const inicial: DadosRebanho = l ? { bois: l.bois, vacas: l.vacas, bezerros: l.bezerros } : REBANHO_VAZIO;
-        // a chave muda quando o gado é movido no Plano: o formulário recomeça com os valores novos
-        return <CartaoLotacao key={`${p.id}-${inicial.bois}-${inicial.vacas}-${inicial.bezerros}`} piquete={p} inicial={inicial} desde={l?.desde ?? null} />;
+        return <CartaoLotacao key={p.id} piquete={p} inicial={inicial} desde={l?.desde ?? null} />;
       })}
     </div>
   );
