@@ -52,7 +52,7 @@ export interface PrevisaoClima {
   dias: PrevisaoDia[]; // 7 dias, a partir de hoje
 }
 
-export type StatusMovimentacao = "pendente" | "realizada";
+export type StatusMovimentacao = "pendente" | "realizada" | "recusada";
 
 export interface Movimentacao {
   id: string;

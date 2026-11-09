@@ -1,8 +1,8 @@
 // Estado da aplicação de demonstração (substitui a API e o banco).
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
-import { gerarPlano as gerarPlanoAgente, type Base } from "./agente";
+import { gerarRecomendacao } from "./agente";
 import { hojeNaFazenda } from "./datas";
-import { baseInicial, USUARIO } from "./demo";
+import { baseInicial, USUARIO, type Base } from "./demo";
 import { areaHa } from "./geo";
 import { lotacaoDe, totalAnimais } from "./rebanho";
 import type { Fazenda, GeoJsonPolygon, PlanoManejo, Rebanho } from "./tipos";
@@ -40,13 +40,27 @@ const ContextoFazenda = createContext<Contexto | null>(null);
 const FUSO = "America/Maceio";
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function recomendar(base: Base, fazendaId: string, hoje: string, agora?: Date): PlanoManejo {
+  return gerarRecomendacao(
+    {
+      piquetes: base.piquetes.filter((p) => p.fazenda_id === fazendaId),
+      ndvi: base.ndvi,
+      clima: { ...base.clima, fazenda_id: fazendaId },
+      lotacao: base.lotacao.filter((l) => l.fazenda_id === fazendaId),
+      historico: base.historico,
+    },
+    hoje,
+    agora,
+  );
+}
+
 function estadoInicial(): EstadoDemo {
   const hoje = hojeNaFazenda(FUSO);
   const base = baseInicial(hoje);
   // a Fazenda do Marcinho já começa com um plano; o Sítio Boa Vista ainda não
   const geradoAs = new Date();
   geradoAs.setHours(7, 48, 0, 0);
-  const plano = gerarPlanoAgente(base, "faz-marcinho", hoje, geradoAs);
+  const plano = recomendar(base, "faz-marcinho", hoje, geradoAs);
   return { ...base, planos: { "faz-marcinho": plano } };
 }
 
@@ -122,7 +136,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   async function gerarPlano(): Promise<PlanoManejo> {
     const alvo = fazendaId;
     await espera(1600); // simula a consulta ao NDVI, ao clima e o tempo de análise do agente
-    const plano = gerarPlanoAgente(atual.current, alvo, hoje);
+    const plano = recomendar(atual.current, alvo, hoje);
     alterar((e) => ({ ...e, planos: { ...e.planos, [alvo]: plano } }));
     return plano;
   }

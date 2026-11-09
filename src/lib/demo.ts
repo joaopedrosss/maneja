@@ -2,10 +2,18 @@
 // estado inicial quando a página é recarregada. As datas são relativas a "hoje"
 // para que a demonstração funcione em qualquer dia.
 
-import type { Base } from "./agente";
 import { somarDias } from "./datas";
 import { areaHa, poligonoEmMetros } from "./geo";
-import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lotacao, Piquete, PrevisaoClima } from "./tipos";
+import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lotacao, Movimentacao, Piquete, PrevisaoClima } from "./tipos";
+
+export interface Base {
+  fazendas: Fazenda[];
+  piquetes: Piquete[];
+  lotacao: Lotacao[];
+  ndvi: LeituraNdvi[];
+  clima: PrevisaoClima;
+  historico: Movimentacao[];
+}
 
 export const USUARIO = { nome: "Técnico Maneja", email: "tecnico@maneja.app" };
 
