@@ -1,0 +1,4 @@
+.rebanho-cartao { display: grid; gap: 12px; }
+.rebanho-campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.rebanho-campos .campo { flex: 1; min-width: 96px; }
+.rebanho-cartao .aviso-info { margin: 0; }

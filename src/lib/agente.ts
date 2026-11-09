@@ -1,18 +1,20 @@
 // Agente de manejo (versão de demonstração).
 // Roda no navegador com regras simples sobre a leitura de NDVI mais recente de
-// cada piquete e a previsão do tempo: decide quais lotes precisam sair e para onde devem ir.
+// cada piquete e a previsão do tempo: decide quais piquetes precisam ser esvaziados e para onde devem ir.
 
 import { CHUVA_FORTE_MM, resumoClima } from "./clima";
 import { dataComDia, decimal } from "./datas";
 import { confiancaDaLeitura, motivoConfianca, ultimaLeitura } from "./ndvi";
-import type { Alerta, Fazenda, LeituraNdvi, Lote, Movimentacao, Piquete, PlanoManejo, PrevisaoClima } from "./tipos";
+import { totalAnimais } from "./rebanho";
+import type { Alerta, Fazenda, LeituraNdvi, Lotacao, Movimentacao, Piquete, PlanoManejo, PrevisaoClima } from "./tipos";
 
 export interface Base {
   fazendas: Fazenda[];
   piquetes: Piquete[];
-  lotes: Lote[];
+  lotacao: Lotacao[];
   ndvi: LeituraNdvi[];
   clima: PrevisaoClima;
+  historico: Movimentacao[];
 }
 
 const HORIZONTE_DIAS = 7;
@@ -30,15 +32,15 @@ function novoId(prefixo: string): string {
 
 export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = new Date()): PlanoManejo {
   const piquetes = base.piquetes.filter((p) => p.fazenda_id === fazendaId);
-  const lotes = base.lotes.filter((l) => l.fazenda_id === fazendaId);
+  const lotacao = base.lotacao.filter((l) => l.fazenda_id === fazendaId && totalAnimais(l) > 0);
   const leitura = (id: string) => ultimaLeitura(base.ndvi, id, hoje);
-  const valor = (id: string | null) => (id === null ? null : leitura(id)?.valor ?? null);
+  const valor = (id: string) => leitura(id)?.valor ?? null;
   const conf = (id: string) => ({
     confianca: confiancaDaLeitura(leitura(id), hoje),
     motivo_confianca: motivoConfianca(leitura(id), hoje),
   });
 
-  const ocupados = new Set(lotes.map((l) => l.piquete_atual_id));
+  const ocupados = new Set(lotacao.map((l) => l.piquete_id));
   const movimentacoes: Movimentacao[] = [];
   const alertas: Alerta[] = [];
   const nome = (id: string) => piquetes.find((p) => p.id === id)!.nome;
@@ -47,17 +49,15 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
   const dataManejo = base.clima.dias.find((d) => d.chuva_mm < CHUVA_FORTE_MM)?.data ?? hoje;
   const avisoChuva = dataManejo === hoje ? "" : ` Adiado para ${dataComDia(dataManejo)} por causa da chuva forte.`;
 
-  // lotes nos piquetes com NDVI mais baixo escolhem primeiro
-  const fila = [...lotes].sort((a, b) => (valor(a.piquete_atual_id) ?? -1) - (valor(b.piquete_atual_id) ?? -1));
+  // os piquetes com NDVI mais baixo escolhem primeiro
+  const fila = [...lotacao].sort((a, b) => (valor(a.piquete_id) ?? 1) - (valor(b.piquete_id) ?? 1));
 
-  for (const lote of fila) {
-    const origem = lote.piquete_atual_id;
+  for (const l of fila) {
+    const origem = l.piquete_id;
     const ndviOrigem = valor(origem);
-    if (origem !== null && (ndviOrigem === null || ndviOrigem >= NDVI_SAIDA)) continue;
+    if (ndviOrigem === null || ndviOrigem >= NDVI_SAIDA) continue;
 
-    const motivoSaida = origem === null
-      ? `${lote.nome} está sem piquete`
-      : `${nome(origem)} está com NDVI ${decimal(ndviOrigem!, 2)}, abaixo de ${decimal(NDVI_SAIDA, 2)}`;
+    const motivoSaida = `${nome(origem)} está com NDVI ${decimal(ndviOrigem, 2)}, abaixo de ${decimal(NDVI_SAIDA, 2)}`;
 
     const destino = piquetes
       .filter((p) => !ocupados.has(p.id) && (valor(p.id) ?? 0) >= NDVI_ENTRADA)
@@ -78,11 +78,9 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
     movimentacoes.push({
       id: novoId("mov"),
       data: dataManejo,
-      lote_id: lote.id,
-      lote_nome: lote.nome,
-      n_animais: lote.n_animais,
+      rebanho: { bois: l.bois, vacas: l.vacas, bezerros: l.bezerros },
       piquete_origem_id: origem,
-      piquete_origem_nome: origem ? nome(origem) : null,
+      piquete_origem_nome: nome(origem),
       piquete_destino_id: destino.id,
       piquete_destino_nome: destino.nome,
       ndvi_origem: ndviOrigem,

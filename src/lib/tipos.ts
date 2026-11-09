@@ -22,14 +22,16 @@ export interface Piquete {
   vegetacao: string; // espécie ou tipo de capim
 }
 
-export interface Lote {
-  id: string;
+export interface Rebanho {
+  bois: number;
+  vacas: number;
+  bezerros: number;
+}
+
+export interface Lotacao extends Rebanho {
+  piquete_id: string;
   fazenda_id: string;
-  nome: string;
-  n_animais: number;
-  peso_medio_kg: number;
-  piquete_atual_id: string | null;
-  desde: string | null; // data em que entrou no piquete atual
+  desde: string | null; // data em que o gado entrou no piquete
 }
 
 export interface LeituraNdvi {
@@ -55,14 +57,12 @@ export type StatusMovimentacao = "pendente" | "realizada";
 export interface Movimentacao {
   id: string;
   data: string;
-  lote_id: string;
-  lote_nome: string;
-  n_animais: number;
-  piquete_origem_id: string | null;
-  piquete_origem_nome: string | null;
+  rebanho: Rebanho;
+  piquete_origem_id: string;
+  piquete_origem_nome: string;
   piquete_destino_id: string;
   piquete_destino_nome: string;
-  ndvi_origem: number | null;
+  ndvi_origem: number;
   ndvi_destino: number;
   motivo: string;
   confianca: Confianca;
@@ -92,7 +92,7 @@ export interface ResumoPiquete {
   vegetacao: string;
   area_ha: number;
   situacao: SituacaoPiquete;
-  lote_atual_nome: string | null;
+  rebanho: Rebanho | null; // null = piquete livre
   ndvi: number | null; // leitura mais recente
   data_ndvi: string | null;
   confianca: Confianca;

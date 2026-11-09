@@ -2,7 +2,8 @@
 // leitura e a escala de cores do mapa.
 
 import { diasEntre, haQuanto } from "./datas";
-import type { Confianca, LeituraNdvi, Lote, Piquete, ResumoPiquete } from "./tipos";
+import { lotacaoDe } from "./rebanho";
+import type { Confianca, LeituraNdvi, Lotacao, Piquete, ResumoPiquete } from "./tipos";
 
 const LEITURA_RECENTE_DIAS = 7;
 const LEITURA_VELHA_DIAS = 14;
@@ -32,17 +33,17 @@ export function motivoConfianca(leitura: LeituraNdvi | null, hoje: string): stri
   return leitura === null ? "sem leitura de NDVI" : `última leitura de NDVI ${haQuanto(diasEntre(leitura.data, hoje))}`;
 }
 
-export function resumoPiquetes(piquetes: Piquete[], ndvi: LeituraNdvi[], lotes: Lote[], hoje: string): ResumoPiquete[] {
+export function resumoPiquetes(piquetes: Piquete[], ndvi: LeituraNdvi[], lotacao: Lotacao[], hoje: string): ResumoPiquete[] {
   return piquetes.map((p) => {
-    const lote = lotes.find((l) => l.piquete_atual_id === p.id) ?? null;
+    const rebanho = lotacaoDe(lotacao, p.id);
     const leitura = ultimaLeitura(ndvi, p.id, hoje);
     return {
       piquete_id: p.id,
       nome: p.nome,
       vegetacao: p.vegetacao,
       area_ha: p.area_ha,
-      situacao: lote ? "ocupado" : "descansando",
-      lote_atual_nome: lote?.nome ?? null,
+      situacao: rebanho ? "ocupado" : "descansando",
+      rebanho,
       ndvi: leitura?.valor ?? null,
       data_ndvi: leitura?.data ?? null,
       confianca: confiancaDaLeitura(leitura, hoje),

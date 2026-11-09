@@ -6,6 +6,7 @@ import "./Layout.css";
 const LINKS: { para: string; texto: string; icone: NomeIcone }[] = [
   { para: "/mapa", texto: "Mapa", icone: "mapa" },
   { para: "/plano", texto: "Plano da semana", icone: "plano" },
+  { para: "/rebanho", texto: "Rebanho", icone: "clientes" },
   { para: "/fazenda", texto: "Fazenda", icone: "fazenda" },
 ];
 

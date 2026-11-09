@@ -5,6 +5,7 @@ import { CHUVA_FORTE_MM, resumoClima } from "../lib/clima";
 import { dataComDia, decimal, fimDoPlano } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
 import { resumoPiquetes } from "../lib/ndvi";
+import { descreverRebanho, totalAnimais } from "../lib/rebanho";
 import type { Confianca, Fazenda, Movimentacao, PlanoManejo, PrevisaoClima, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
@@ -31,11 +32,10 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
   const [destino, setDestino] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
-  const lote = estado.lotes.find((l) => l.id === mov.lote_id);
   const opcoes = fazenda
-    ? resumoPiquetes(estado.piquetes.filter((p) => p.fazenda_id === fazenda.id), estado.ndvi, estado.lotes, hoje)
+    ? resumoPiquetes(estado.piquetes.filter((p) => p.fazenda_id === fazenda.id), estado.ndvi, estado.lotacao, hoje)
         .filter((r) => r.situacao === "descansando" && r.ndvi !== null)
-        .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== lote?.piquete_atual_id)
+        .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== mov.piquete_origem_id)
         .sort((a, b) => b.ndvi! - a.ndvi!)
     : [];
 
@@ -52,20 +52,21 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
     <article className={realizada ? "cartao plano-movimento plano-movimento-feito" : "cartao plano-movimento"}>
       <div className="plano-movimento-topo">
         <h4 className="cartao-titulo">
-          Mover {mov.lote_nome} ({mov.n_animais} animais): {mov.piquete_origem_nome ?? "sem piquete"}{" "}
+          Mover {totalAnimais(mov.rebanho)} animais: {mov.piquete_origem_nome}{" "}
           <span className="plano-seta">→</span> {mov.piquete_destino_nome}
         </h4>
         <span className={`selo selo-${mov.confianca}`}>Confiança {CONFIANCA[mov.confianca]}</span>
       </div>
+      <p className="cartao-subtitulo">{descreverRebanho(mov.rebanho)}</p>
       <p>{mov.motivo}</p>
       <p className="plano-previsao">
-        NDVI: {mov.ndvi_origem === null ? "sem leitura" : decimal(mov.ndvi_origem, 2)} → {decimal(mov.ndvi_destino, 2)}
+        NDVI: {decimal(mov.ndvi_origem, 2)} → {decimal(mov.ndvi_destino, 2)}
       </p>
       <p className="cartao-subtitulo">{mov.motivo_confianca}</p>
 
       {realizada ? (
         <p className="aviso-info plano-feito" role="status">
-          Movimentação registrada ✓ — {mov.lote_nome} está no {mov.piquete_destino_nome} desde hoje
+          Movimentação registrada ✓ — o rebanho está no {mov.piquete_destino_nome} desde hoje
           {mov.destino_trocado ? " (piquete escolhido pelo técnico)" : ""}. <Link to="/mapa">Ver no mapa</Link>
         </p>
       ) : escolhendo ? (
@@ -165,7 +166,7 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
 
       {gerando ? (
         <p className="aviso-info" role="status">
-          O agente está analisando os piquetes, os lotes, as leituras de NDVI e a previsão do tempo…
+          O agente está analisando os piquetes, o rebanho, as leituras de NDVI e a previsão do tempo…
         </p>
       ) : null}
 

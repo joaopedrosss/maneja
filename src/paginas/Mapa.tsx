@@ -5,6 +5,7 @@ import "@geoman-io/leaflet-geoman-free";
 import { dataComDia, dataCurta, decimal } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
 import { centro } from "../lib/geo";
+import { descreverRebanho, totalAnimais } from "../lib/rebanho";
 import { corDoNdvi, NDVI_ESCALA_MAX, NDVI_ESCALA_MIN, resumoPiquetes } from "../lib/ndvi";
 import type { Fazenda, GeoJsonPolygon, Piquete, ResumoPiquete } from "../lib/tipos";
 import "./Mapa.css";
@@ -109,7 +110,7 @@ function BuscaCoordenadas() {
 function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
   const { estado, hoje, criarPiquete, atualizarGeometria, desativarPiquete } = useFazenda();
   const piquetes = estado.piquetes.filter((p) => p.fazenda_id === fazenda.id);
-  const resumos = resumoPiquetes(piquetes, estado.ndvi, estado.lotes, hoje);
+  const resumos = resumoPiquetes(piquetes, estado.ndvi, estado.lotacao, hoje);
   const plano = estado.planos[fazenda.id];
 
   const [novaGeometria, setNovaGeometria] = useState<GeoJsonPolygon | null>(null);
@@ -213,7 +214,7 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                     <div className="tooltip-detalhes">
                       Capim: {resumo.vegetacao}<br />
                       Situação: {resumo.situacao}<br />
-                      {resumo.lote_atual_nome ? <>Lote: {resumo.lote_atual_nome}<br /></> : null}
+                      {resumo.rebanho ? <>Rebanho: {descreverRebanho(resumo.rebanho)}<br /></> : null}
                       Confiança: {resumo.confianca} ({resumo.motivo_confianca})
                     </div>
                   ) : null}
@@ -230,7 +231,7 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
               <Polyline key={m.id} positions={[centro(origem.geometria), centro(destino.geometria)]}
                 pathOptions={{ color: corDoTema("--cor-superficie"), dashArray: "10, 10", weight: 3 }}>
                 <Tooltip permanent direction="top" offset={[0, -16]} opacity={0.9} className="tooltip-movimento">
-                  {dataComDia(m.data)} · {m.lote_nome} →
+                  {dataComDia(m.data)} · {totalAnimais(m.rebanho)} animais →
                 </Tooltip>
               </Polyline>
             );
@@ -280,7 +281,7 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                   <li key={p.id} className={`item-piquete ${selecionadoId === p.id ? "ativo" : ""}`} onClick={() => setSelecionadoId(p.id)}>
                     <h3>{p.nome}</h3>
                     <p>{r?.vegetacao} · {decimal(p.area_ha, 2)} ha</p>
-                    <p>Situação: {r?.situacao}{r?.lote_atual_nome ? ` (${r.lote_atual_nome})` : ""}</p>
+                    <p>Situação: {r?.situacao}{r?.rebanho ? ` (${descreverRebanho(r.rebanho)})` : ""}</p>
                     {r?.ndvi != null && r.data_ndvi ? (
                       <p>NDVI: {decimal(r.ndvi, 2)} em {dataCurta(r.data_ndvi)}</p>
                     ) : <p>Sem leitura de NDVI</p>}

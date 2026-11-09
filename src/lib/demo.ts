@@ -5,7 +5,7 @@
 import type { Base } from "./agente";
 import { somarDias } from "./datas";
 import { areaHa, poligonoEmMetros } from "./geo";
-import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lote, Piquete, PrevisaoClima } from "./tipos";
+import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lotacao, Piquete, PrevisaoClima } from "./tipos";
 
 export const USUARIO = { nome: "Técnico Maneja", email: "tecnico@maneja.app" };
 
@@ -63,11 +63,9 @@ export function baseInicial(hoje: string): Base {
       poligonoEmMetros(ORIGEM_BOA_VISTA, [[-200, 110], [-160, 260], [60, 250], [0, 110]])),
   ];
 
-  const lotes: Lote[] = [
-    { id: "lote-recria", fazenda_id: "faz-marcinho", nome: "Lote Recria", n_animais: 28, peso_medio_kg: 350,
-      piquete_atual_id: "pq-abobora", desde: somarDias(hoje, -6) },
-    { id: "lote-vacas", fazenda_id: "faz-boa-vista", nome: "Lote Vacas", n_animais: 30, peso_medio_kg: 450,
-      piquete_atual_id: "pq-baixa", desde: somarDias(hoje, -4) },
+  const lotacao: Lotacao[] = [
+    { piquete_id: "pq-abobora", fazenda_id: "faz-marcinho", bois: 12, vacas: 6, bezerros: 5, desde: somarDias(hoje, -6) },
+    { piquete_id: "pq-baixa", fazenda_id: "faz-boa-vista", bois: 0, vacas: 24, bezerros: 10, desde: somarDias(hoje, -4) },
   ];
 
   const ndvi: LeituraNdvi[] = [
@@ -91,5 +89,5 @@ export function baseInicial(hoje: string): Base {
     })),
   };
 
-  return { fazendas, piquetes, lotes, ndvi, clima };
+  return { fazendas, piquetes, lotacao, ndvi, clima, historico: [] };
 }

@@ -4,6 +4,7 @@ import { FazendaProvider } from "./lib/fazenda";
 import Configuracoes from "./paginas/Configuracoes";
 import Mapa from "./paginas/Mapa";
 import Plano from "./paginas/Plano";
+import Rebanho from "./paginas/Rebanho";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/mapa" element={<Mapa />} />
             <Route path="/plano" element={<Plano />} />
+            <Route path="/rebanho" element={<Rebanho />} />
             <Route path="/fazenda" element={<Configuracoes />} />
           </Route>
           <Route path="*" element={<Navigate to="/mapa" replace />} />
