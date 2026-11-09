@@ -7,7 +7,7 @@ import { useFazenda } from "../lib/fazenda";
 import { resumoPiquetes } from "../lib/ndvi";
 import { descreverRebanho, lotacaoDe, totalAnimais } from "../lib/rebanho";
 import { validarMovimento } from "../lib/regras";
-import type { Confianca, Fazenda, Movimentacao, PlanoManejo, PrevisaoClima, TipoAlerta } from "../lib/tipos";
+import type { Confianca, Movimentacao, PrevisaoClima, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
 const CONFIANCA: Record<Confianca, string> = { alta: "alta", media: "média", baixa: "baixa" };
@@ -28,19 +28,17 @@ function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[
 // ---------- uma recomendação de movimentação ----------
 
 function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boolean }) {
-  const { estado, fazenda, hoje, executarMovimentacao, recusarMovimentacao } = useFazenda();
+  const { estado, hoje, executarMovimentacao, recusarMovimentacao } = useFazenda();
   const [escolhendo, setEscolhendo] = useState(false);
   const [destino, setDestino] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
   // só aparecem os piquetes que passam nas mesmas regras da recomendação
   const dados = { piquetes: estado.piquetes, ndvi: estado.ndvi, lotacao: estado.lotacao, hoje };
-  const opcoes = fazenda
-    ? resumoPiquetes(estado.piquetes.filter((p) => p.fazenda_id === fazenda.id), estado.ndvi, estado.lotacao, hoje)
-        .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== mov.piquete_origem_id)
-        .filter((r) => validarMovimento(r.piquete_id, lotacaoDe(estado.lotacao, mov.piquete_origem_id) ?? mov.rebanho, dados).length === 0)
-        .sort((a, b) => b.ndvi! - a.ndvi!)
-    : [];
+  const opcoes = resumoPiquetes(estado.piquetes, estado.ndvi, estado.lotacao, hoje)
+    .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== mov.piquete_origem_id)
+    .filter((r) => validarMovimento(r.piquete_id, lotacaoDe(estado.lotacao, mov.piquete_origem_id) ?? mov.rebanho, dados).length === 0)
+    .sort((a, b) => b.ndvi! - a.ndvi!);
 
   function confirmar(destinoId?: string): void {
     setErro(null);
@@ -144,9 +142,9 @@ function ResumoClima({ clima }: { clima: PrevisaoClima }) {
 
 // ---------- página ----------
 
-function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
-  const { estado, gerarPlano } = useFazenda();
-  const plano: PlanoManejo | undefined = estado.planos[fazenda.id];
+export default function Plano() {
+  const { estado, fazenda, gerarPlano } = useFazenda();
+  const plano = estado.plano;
   const [gerando, setGerando] = useState(false);
 
   async function gerar(): Promise<void> {
@@ -239,9 +237,4 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
       ) : null}
     </div>
   );
-}
-
-export default function Plano() {
-  const { fazenda } = useFazenda();
-  return fazenda ? <PlanoDaFazenda key={fazenda.id} fazenda={fazenda} /> : null;
 }

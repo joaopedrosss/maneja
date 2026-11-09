@@ -10,7 +10,7 @@ import { validarMovimento } from "./regras";
 import type { Fazenda, GeoJsonPolygon, Movimentacao, PlanoManejo, Rebanho } from "./tipos";
 
 export interface EstadoDemo extends Base {
-  planos: Record<string, PlanoManejo>; // fazenda_id → plano atual
+  plano: PlanoManejo | null;
 }
 
 export type DadosFazenda = Pick<Fazenda, "nome">;
@@ -24,10 +24,8 @@ export interface NovoPiquete {
 interface Contexto {
   usuario: typeof USUARIO;
   estado: EstadoDemo;
-  fazendas: Fazenda[];
-  fazenda: Fazenda | null;
+  fazenda: Fazenda;
   hoje: string;
-  selecionar: (id: string) => void;
   salvarFazenda: (dados: DadosFazenda) => void;
   criarPiquete: (dados: NovoPiquete) => string;
   atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => void;
@@ -43,18 +41,9 @@ const ContextoFazenda = createContext<Contexto | null>(null);
 const FUSO = "America/Maceio";
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function recomendar(base: Base, fazendaId: string, hoje: string, agora?: Date): PlanoManejo {
-  return gerarRecomendacao(
-    {
-      piquetes: base.piquetes.filter((p) => p.fazenda_id === fazendaId),
-      ndvi: base.ndvi,
-      clima: { ...base.clima, fazenda_id: fazendaId },
-      lotacao: base.lotacao.filter((l) => l.fazenda_id === fazendaId),
-      historico: base.historico,
-    },
-    hoje,
-    agora,
-  );
+function recomendar(base: Base, hoje: string, agora?: Date): PlanoManejo {
+  const { piquetes, ndvi, clima, lotacao, historico } = base;
+  return gerarRecomendacao({ piquetes, ndvi, clima, lotacao, historico }, hoje, agora);
 }
 
 function comMovimentacao(plano: PlanoManejo, mov: Movimentacao): PlanoManejo {
@@ -64,21 +53,20 @@ function comMovimentacao(plano: PlanoManejo, mov: Movimentacao): PlanoManejo {
 function estadoInicial(): EstadoDemo {
   const hoje = hojeNaFazenda(FUSO);
   const base = baseInicial(hoje);
-  // a Fazenda do Marcinho já começa com um plano; o Sítio Boa Vista ainda não
+  // a demonstração já começa com um plano
   const geradoAs = new Date();
   geradoAs.setHours(7, 48, 0, 0);
-  const plano = recomendar(base, "faz-marcinho", hoje, geradoAs);
-  return { ...base, planos: { "faz-marcinho": plano } };
+  return { ...base, plano: recomendar(base, hoje, geradoAs) };
 }
 
 export function FazendaProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoDemo>(estadoInicial);
-  const [fazendaId, setFazendaId] = useState<string>("faz-marcinho");
   // cópia síncrona do estado: `alterar` é o único caminho de escrita e a mantém em dia
   const atual = useRef(estado);
 
-  const fazenda = estado.fazendas.find((f) => f.id === fazendaId) ?? null;
-  const hoje = hojeNaFazenda(fazenda?.timezone ?? FUSO);
+  const fazenda = estado.fazenda;
+  const fazendaId = fazenda.id;
+  const hoje = hojeNaFazenda(fazenda.timezone);
 
   function alterar(transformar: (e: EstadoDemo) => EstadoDemo): void {
     atual.current = transformar(atual.current);
@@ -86,10 +74,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   }
 
   function salvarFazenda(dados: DadosFazenda): void {
-    alterar((e) => ({
-      ...e,
-      fazendas: e.fazendas.map((f) => (f.id === fazendaId ? { ...f, ...dados } : f)),
-    }));
+    alterar((e) => ({ ...e, fazenda: { ...e.fazenda, ...dados } }));
   }
 
   function criarPiquete(dados: NovoPiquete): string {
@@ -141,10 +126,9 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   }
 
   async function gerarPlano(): Promise<PlanoManejo> {
-    const alvo = fazendaId;
     await espera(1600); // simula a consulta ao NDVI, ao clima e o tempo de análise do agente
-    const plano = recomendar(atual.current, alvo, hoje);
-    alterar((e) => ({ ...e, planos: { ...e.planos, [alvo]: plano } }));
+    const plano = recomendar(atual.current, hoje);
+    alterar((e) => ({ ...e, plano }));
     return plano;
   }
 
@@ -152,7 +136,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   // o rebanho passa a ocupar o destino a partir de hoje e o mapa se atualiza.
   function executarMovimentacao(movimentacaoId: string, destinoId?: string): string | null {
     const e = atual.current;
-    const plano = e.planos[fazendaId];
+    const plano = e.plano;
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
     if (!plano || !mov) return "Movimentação não encontrada.";
     const origem = lotacaoDe(e.lotacao, mov.piquete_origem_id);
@@ -178,20 +162,20 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
       ...s,
       lotacao: s.lotacao.map((l) => (l === origem ? { ...l, piquete_id: destino.id, desde: hoje } : l)),
       historico: [{ ...registrada, data: hoje }, ...s.historico],
-      planos: { ...s.planos, [fazendaId]: comMovimentacao(plano, registrada) },
+      plano: comMovimentacao(plano, registrada),
     }));
     return null;
   }
 
   function recusarMovimentacao(movimentacaoId: string): void {
-    const plano = atual.current.planos[fazendaId];
+    const plano = atual.current.plano;
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
     if (!plano || !mov) return;
     const recusada: Movimentacao = { ...mov, status: "recusada" };
     alterar((s) => ({
       ...s,
       historico: [{ ...recusada, data: hoje }, ...s.historico],
-      planos: { ...s.planos, [fazendaId]: comMovimentacao(plano, recusada) },
+      plano: comMovimentacao(plano, recusada),
     }));
   }
 
@@ -200,10 +184,8 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
       value={{
         usuario: USUARIO,
         estado,
-        fazendas: estado.fazendas,
         fazenda,
         hoje,
-        selecionar: setFazendaId,
         salvarFazenda,
         criarPiquete,
         atualizarGeometria,

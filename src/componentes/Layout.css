@@ -67,17 +67,6 @@
   border-top: 1px solid var(--cor-menu-linha);
 }
 
-.menu-seletor {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--cor-menu-linha);
-  border-radius: var(--raio-pequeno);
-  background: var(--cor-menu-fundo);
-  color: var(--cor-menu-texto);
-  font-family: inherit;
-  font-size: 0.85rem;
-}
-
 .menu-usuario {
   display: flex;
   align-items: center;

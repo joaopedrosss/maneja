@@ -3,7 +3,6 @@ export type SituacaoPiquete = "ocupado" | "descansando";
 
 export interface Fazenda {
   id: string;
-  cliente_nome: string;
   nome: string;
   timezone: string;
 }

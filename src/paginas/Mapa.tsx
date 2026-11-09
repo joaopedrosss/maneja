@@ -7,7 +7,7 @@ import { useFazenda } from "../lib/fazenda";
 import { centro } from "../lib/geo";
 import { descreverRebanho, totalAnimais } from "../lib/rebanho";
 import { corDoNdvi, NDVI_ESCALA_MAX, NDVI_ESCALA_MIN, resumoPiquetes } from "../lib/ndvi";
-import type { Fazenda, GeoJsonPolygon, Piquete, ResumoPiquete } from "../lib/tipos";
+import type { GeoJsonPolygon, Piquete, ResumoPiquete } from "../lib/tipos";
 import "./Mapa.css";
 
 // O Leaflet pinta em SVG e não entende var(--x): lemos o valor da variável do tema.
@@ -107,11 +107,11 @@ function BuscaCoordenadas() {
 
 // ---------- página ----------
 
-function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
+export default function Mapa() {
   const { estado, hoje, criarPiquete, atualizarGeometria, desativarPiquete } = useFazenda();
-  const piquetes = estado.piquetes.filter((p) => p.fazenda_id === fazenda.id);
+  const piquetes = estado.piquetes;
   const resumos = resumoPiquetes(piquetes, estado.ndvi, estado.lotacao, hoje);
-  const plano = estado.planos[fazenda.id];
+  const plano = estado.plano;
 
   const [novaGeometria, setNovaGeometria] = useState<GeoJsonPolygon | null>(null);
   const [nome, setNome] = useState("");
@@ -316,9 +316,4 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
       </div>
     </div>
   );
-}
-
-export default function Mapa() {
-  const { fazenda } = useFazenda();
-  return fazenda ? <MapaDaFazenda key={fazenda.id} fazenda={fazenda} /> : null;
 }

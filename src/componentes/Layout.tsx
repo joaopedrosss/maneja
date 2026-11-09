@@ -11,7 +11,7 @@ const LINKS: { para: string; texto: string; icone: NomeIcone }[] = [
 ];
 
 export default function Layout() {
-  const { usuario, fazendas, fazenda, selecionar } = useFazenda();
+  const { usuario, fazenda } = useFazenda();
   const localizacao = useLocation();
 
   return (
@@ -34,31 +34,19 @@ export default function Layout() {
           ))}
         </nav>
         <div className="menu-rodape">
-          <select
-            className="menu-seletor"
-            aria-label="Fazenda"
-            value={fazenda?.id ?? ""}
-            onChange={(evento) => selecionar(evento.target.value)}
-          >
-            {fazendas.map((f) => (
-              <option key={f.id} value={f.id}>
-                {`${f.cliente_nome} — ${f.nome}`}
-              </option>
-            ))}
-          </select>
           <div className="menu-usuario">
             <span className="menu-avatar" aria-hidden="true">
               {usuario.nome.charAt(0).toUpperCase()}
             </span>
             <span className="menu-usuario-texto">
               <span className="menu-usuario-nome">{usuario.nome}</span>
-              <span className="menu-usuario-fazenda">{fazenda?.nome ?? ""}</span>
+              <span className="menu-usuario-fazenda">{fazenda.nome}</span>
             </span>
           </div>
         </div>
       </aside>
       <main className={localizacao.pathname === "/mapa" ? "conteudo conteudo-cheio" : "conteudo"}>
-        {fazenda === null ? <p>Nenhuma fazenda selecionada.</p> : <Outlet />}
+        <Outlet />
       </main>
     </div>
   );

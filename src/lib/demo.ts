@@ -7,7 +7,7 @@ import { areaHa, poligonoEmMetros } from "./geo";
 import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lotacao, Movimentacao, Piquete, PrevisaoClima } from "./tipos";
 
 export interface Base {
-  fazendas: Fazenda[];
+  fazenda: Fazenda;
   piquetes: Piquete[];
   lotacao: Lotacao[];
   ndvi: LeituraNdvi[];
@@ -18,7 +18,6 @@ export interface Base {
 export const USUARIO = { nome: "Técnico Maneja", email: "tecnico@maneja.app" };
 
 const ORIGEM_MARCINHO: [number, number] = [-9.6205, -35.9695];
-const ORIGEM_BOA_VISTA: [number, number] = [-9.6125, -35.9835];
 
 function piquete(
   id: string,
@@ -40,20 +39,11 @@ function serie(piquete_id: string, hoje: string, ultimaHaDias: number, valores: 
 }
 
 export function baseInicial(hoje: string): Base {
-  const fazendas: Fazenda[] = [
-    {
-      id: "faz-marcinho",
-      cliente_nome: "Cliente Marcinho",
-      nome: "Fazenda do Marcinho",
-      timezone: "America/Maceio",
-    },
-    {
-      id: "faz-boa-vista",
-      cliente_nome: "Cliente Ana Lúcia",
-      nome: "Sítio Boa Vista",
-      timezone: "America/Maceio",
-    },
-  ];
+  const fazenda: Fazenda = {
+    id: "faz-marcinho",
+    nome: "Fazenda do Marcinho",
+    timezone: "America/Maceio",
+  };
 
   const piquetes: Piquete[] = [
     piquete("pq-abobora", "faz-marcinho", "Piquete Abóbora", "Marandu",
@@ -62,26 +52,16 @@ export function baseInicial(hoje: string): Base {
       poligonoEmMetros(ORIGEM_MARCINHO, [[70, 20], [190, -55], [105, -240], [-15, -165]])),
     piquete("pq-macarrao", "faz-marcinho", "Piquete Macarrão", "Marandu",
       poligonoEmMetros(ORIGEM_MARCINHO, [[-130, 165], [-20, 390], [270, 225], [160, 0], [80, 45], [-35, 125]])),
-
-    piquete("pq-baixa", "faz-boa-vista", "Piquete da Baixa", "Mombaça",
-      poligonoEmMetros(ORIGEM_BOA_VISTA, [[-200, -120], [-200, 110], [0, 110], [0, -120]])),
-    piquete("pq-alto", "faz-boa-vista", "Piquete do Alto", "Mombaça",
-      poligonoEmMetros(ORIGEM_BOA_VISTA, [[0, -120], [0, 110], [190, 130], [210, -110]])),
-    piquete("pq-acude", "faz-boa-vista", "Piquete do Açude", "Tifton 85",
-      poligonoEmMetros(ORIGEM_BOA_VISTA, [[-200, 110], [-160, 260], [60, 250], [0, 110]])),
   ];
 
   const lotacao: Lotacao[] = [
     { piquete_id: "pq-abobora", fazenda_id: "faz-marcinho", bois: 12, vacas: 6, bezerros: 5, desde: somarDias(hoje, -6) },
-    { piquete_id: "pq-baixa", fazenda_id: "faz-boa-vista", bois: 0, vacas: 24, bezerros: 10, desde: somarDias(hoje, -4) },
   ];
 
   const ndvi: LeituraNdvi[] = [
     ...serie("pq-abobora", hoje, 2, [0.66, 0.63, 0.6, 0.55, 0.49, 0.44, 0.37, 0.29]),
     ...serie("pq-jerimum", hoje, 2, [0.7, 0.73, 0.76, 0.78, 0.8, 0.81, 0.83, 0.84]),
     ...serie("pq-macarrao", hoje, 9, [0.68, 0.7, 0.71, 0.73, 0.72, 0.74, 0.75, 0.76]),
-    ...serie("pq-baixa", hoje, 2, [0.6, 0.58, 0.55, 0.52, 0.5, 0.47, 0.45, 0.42]),
-    ...serie("pq-alto", hoje, 2, [0.4, 0.44, 0.48, 0.52, 0.56, 0.6, 0.63, 0.66]),
   ];
 
   const chuvas = [0, 2, 48, 12, 0, 0, 5];
@@ -97,5 +77,5 @@ export function baseInicial(hoje: string): Base {
     })),
   };
 
-  return { fazendas, piquetes, lotacao, ndvi, clima, historico: [] };
+  return { fazenda, piquetes, lotacao, ndvi, clima, historico: [] };
 }

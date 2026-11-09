@@ -28,4 +28,3 @@ O mapa de satélite (Esri) precisa de internet.
    - **Aceita?** Se sim, clique em *Confirmar movimentação*. Se não, clique em *Escolher outro piquete* e escolha o Jerimum.
    - A movimentação é registrada e o mapa se atualiza.
 3. **Gerar plano**: o plano é gerado e aparece na tela.
-4. Troque para o **Sítio Boa Vista** no seletor do menu. A fazenda ainda não tem plano, então os piquetes ficam cinza. Use *Gerar plano*. O Piquete do Açude continua cinza porque não tem medição.

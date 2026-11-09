@@ -52,10 +52,8 @@ function CartaoLotacao({ piquete, inicial, desde }: { piquete: Piquete; inicial:
 }
 
 export default function Rebanho() {
-  const { estado, fazenda } = useFazenda();
-  if (fazenda === null) return null;
-
-  const piquetes = estado.piquetes.filter((p) => p.fazenda_id === fazenda.id);
+  const { estado } = useFazenda();
+  const piquetes = estado.piquetes;
   const lotacoes = piquetes.map((p) => lotacaoDe(estado.lotacao, p.id));
   const total = lotacoes.reduce<DadosRebanho>(
     (s, l) => ({
