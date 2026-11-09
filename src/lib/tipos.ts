@@ -10,10 +10,6 @@ export interface Fazenda {
   funcionarios_disponiveis: number;
   animais_por_funcionario_dia: number;
   dias_preferenciais_manejo: number[]; // 0 = segunda … 6 = domingo
-  envio_plano_dia: number; // 0 = segunda … 6 = domingo
-  envio_plano_hora: number; // 0 … 23, hora local da fazenda
-  telegram_token: string;
-  telegram_vinculado: boolean;
 }
 
 export interface Cultivar {

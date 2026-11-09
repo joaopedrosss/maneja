@@ -4,8 +4,6 @@ import type { Fazenda } from "../../lib/tipos";
 import "./FormularioFazenda.css";
 
 const DIAS_CURTOS = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
-const DIAS_LONGOS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
-const HORAS = Array.from({ length: 24 }, (_, hora) => hora);
 
 interface Props {
   inicial: Fazenda;
@@ -17,8 +15,6 @@ export default function FormularioFazenda({ inicial, aoEnviar }: Props) {
   const [funcionarios, setFuncionarios] = useState(String(inicial.funcionarios_disponiveis));
   const [animais, setAnimais] = useState(String(inicial.animais_por_funcionario_dia));
   const [dias, setDias] = useState<number[]>(inicial.dias_preferenciais_manejo);
-  const [envioDia, setEnvioDia] = useState(inicial.envio_plano_dia);
-  const [envioHora, setEnvioHora] = useState(inicial.envio_plano_hora);
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
 
@@ -50,8 +46,6 @@ export default function FormularioFazenda({ inicial, aoEnviar }: Props) {
       funcionarios_disponiveis: nFuncionarios,
       animais_por_funcionario_dia: nAnimais,
       dias_preferenciais_manejo: [...dias].sort((a, b) => a - b),
-      envio_plano_dia: envioDia,
-      envio_plano_hora: envioHora,
     });
     setSalvo(true);
   }
@@ -82,23 +76,6 @@ export default function FormularioFazenda({ inicial, aoEnviar }: Props) {
               {rotulo}
             </label>
           ))}
-        </div>
-      </fieldset>
-      <fieldset className="campo formulario-dias">
-        <legend>Quando o produtor quer receber o plano?</legend>
-        <div className="formulario-envio">
-          <select className="campo-entrada" aria-label="Dia da semana do envio" value={envioDia}
-            onChange={(e) => { mudou(); setEnvioDia(Number(e.target.value)); }}>
-            {DIAS_LONGOS.map((rotulo, dia) => (
-              <option key={rotulo} value={dia}>{rotulo}</option>
-            ))}
-          </select>
-          <select className="campo-entrada" aria-label="Hora do envio" value={envioHora}
-            onChange={(e) => { mudou(); setEnvioHora(Number(e.target.value)); }}>
-            {HORAS.map((hora) => (
-              <option key={hora} value={hora}>{`${hora}h`}</option>
-            ))}
-          </select>
         </div>
       </fieldset>
       {erro !== null ? <p className="aviso-erro" role="alert">{erro}</p> : null}

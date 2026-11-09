@@ -28,7 +28,6 @@ O mapa de satélite (Esri) precisa de internet.
    - **Aceita?** Se sim, clique em *Confirmar movimentação*. Se não, clique em *Escolher outro piquete* e escolha o Jerimum.
    - A movimentação é registrada e o mapa se atualiza.
    - Em *Medições pedidas*, registre a altura do Macarrão (ex.: 65 cm) e gere o plano de novo: a confiança sobe.
-3. **Gerar e enviar plano agora**: o plano é gerado, mas não é enviado, porque o produtor ainda não conectou o Telegram.
-4. **Fazenda**: copie o link do Telegram e clique em *Atualizar status*. A demo simula que o produtor tocou em "Começar". Volte ao plano e gere de novo: agora o plano é enviado.
-   - Também dá para mudar a equipe para 1 pessoa × 10 animais e gerar o plano: aparece o alerta de capacidade.
-5. Troque para o **Sítio Boa Vista** no seletor do menu. A fazenda ainda não tem plano, então os piquetes ficam cinza. Use *Gerar o primeiro plano*. O Piquete do Açude continua cinza porque não tem medição.
+3. **Gerar plano**: o plano é gerado e aparece na tela.
+4. **Fazenda**: mude a equipe para 1 pessoa × 10 animais e gere o plano: aparece o alerta de capacidade.
+5. Troque para o **Sítio Boa Vista** no seletor do menu. A fazenda ainda não tem plano, então os piquetes ficam cinza. Use *Gerar plano*. O Piquete do Açude continua cinza porque não tem medição.

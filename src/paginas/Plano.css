@@ -1,6 +1,4 @@
 .plano-gerar { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.plano-checkbox { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
-.plano-checkbox input { accent-color: var(--cor-primaria); }
 .plano-periodo { margin: 0; padding-bottom: 16px; border-bottom: 1px solid var(--cor-borda); font-weight: 500; }
 .plano-demonstracao { border: 1px solid var(--cor-alerta); font-weight: 600; margin: 0; }
 .plano-secao, .plano-dia { display: grid; gap: 12px; }

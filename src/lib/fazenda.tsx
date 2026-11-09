@@ -16,8 +16,6 @@ export type DadosFazenda = Pick<
   | "funcionarios_disponiveis"
   | "animais_por_funcionario_dia"
   | "dias_preferenciais_manejo"
-  | "envio_plano_dia"
-  | "envio_plano_hora"
 >;
 
 export interface NovoPiquete {
@@ -36,7 +34,6 @@ interface Contexto {
   hoje: string;
   selecionar: (id: string) => void;
   salvarFazenda: (dados: DadosFazenda) => void;
-  atualizarStatusTelegram: () => Promise<boolean>;
   criarPiquete: (dados: NovoPiquete) => string;
   atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => void;
   desativarPiquete: (piqueteId: string) => string | null;
@@ -79,16 +76,6 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
       ...e,
       fazendas: e.fazendas.map((f) => (f.id === fazendaId ? { ...f, ...dados } : f)),
     }));
-  }
-
-  async function atualizarStatusTelegram(): Promise<boolean> {
-    await espera(700);
-    // Demonstração: considera que o produtor abriu o link e tocou em "Começar".
-    alterar((e) => ({
-      ...e,
-      fazendas: e.fazendas.map((f) => (f.id === fazendaId ? { ...f, telegram_vinculado: true } : f)),
-    }));
-    return true;
   }
 
   function criarPiquete(dados: NovoPiquete): string {
@@ -203,7 +190,6 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
         hoje,
         selecionar: setFazendaId,
         salvarFazenda,
-        atualizarStatusTelegram,
         criarPiquete,
         atualizarGeometria,
         desativarPiquete,

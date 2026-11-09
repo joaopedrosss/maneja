@@ -38,10 +38,6 @@ export function baseInicial(hoje: string): Base {
       funcionarios_disponiveis: 2,
       animais_por_funcionario_dia: 20,
       dias_preferenciais_manejo: [0, 1, 2, 3, 4],
-      envio_plano_dia: 5,
-      envio_plano_hora: 12,
-      telegram_token: "f4cb85fc7eda41be",
-      telegram_vinculado: false,
     },
     {
       id: "faz-boa-vista",
@@ -51,10 +47,6 @@ export function baseInicial(hoje: string): Base {
       funcionarios_disponiveis: 2,
       animais_por_funcionario_dia: 20,
       dias_preferenciais_manejo: [0, 3],
-      envio_plano_dia: 6,
-      envio_plano_hora: 18,
-      telegram_token: "9a1e07c3b2d84f6a",
-      telegram_vinculado: true,
     },
   ];
 

@@ -151,23 +151,16 @@ function Medicao({ pedido, bloqueado }: { pedido: PedidoValidacao; bloqueado: bo
 
 // ---------- página ----------
 
-type Envio = { tipo: "enviado" } | { tipo: "sem_telegram" } | { tipo: "nao_enviado" } | null;
-
 function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
   const { estado, gerarPlano } = useFazenda();
   const plano: PlanoManejo | undefined = estado.planos[fazenda.id];
   const [gerando, setGerando] = useState(false);
-  const [enviar, setEnviar] = useState(true);
-  const [envio, setEnvio] = useState<Envio>(null);
 
   async function gerar(): Promise<void> {
     if (gerando) return;
     setGerando(true);
-    setEnvio(null);
     await gerarPlano();
     setGerando(false);
-    if (!enviar) setEnvio({ tipo: "nao_enviado" });
-    else setEnvio(fazenda.telegram_vinculado ? { tipo: "enviado" } : { tipo: "sem_telegram" });
   }
 
   const grupos = plano ? movimentosPorDia(plano.movimentacoes) : [];
@@ -184,24 +177,14 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
           <button className="botao botao-primario" disabled={gerando} onClick={() => void gerar()}>
             {gerando ? (
               <><span className="plano-spinner" aria-hidden="true" /> Analisando piquetes…</>
-            ) : plano ? "Gerar e enviar plano agora" : "Gerar o primeiro plano"}
+            ) : "Gerar plano"}
           </button>
-          <label className="plano-checkbox">
-            <input type="checkbox" checked={enviar} disabled={gerando} onChange={(e) => setEnviar(e.target.checked)} /> enviar ao produtor
-          </label>
         </div>
       </div>
 
       {gerando ? (
         <p className="aviso-info" role="status">
           O agente está analisando piquetes, lotes, crescimento do capim e previsão do tempo…
-        </p>
-      ) : null}
-      {envio?.tipo === "enviado" ? <p className="aviso-info" role="status">Plano gerado e enviado ao produtor pelo Telegram ✓</p> : null}
-      {envio?.tipo === "nao_enviado" ? <p className="aviso-info" role="status">Plano gerado ✓ (não enviado ao produtor)</p> : null}
-      {envio?.tipo === "sem_telegram" ? (
-        <p className="aviso-alerta" role="status">
-          Plano gerado, mas não foi enviado: o produtor ainda não conectou o Telegram. Veja em <Link to="/fazenda">Fazenda</Link>.
         </p>
       ) : null}
 
@@ -216,7 +199,7 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
       {!plano && !gerando ? (
         <section className="cartao plano-vazio">
           <h2 className="cartao-titulo">Ainda não há plano para esta fazenda</h2>
-          <p className="cartao-subtitulo">Use “Gerar o primeiro plano” para o agente analisar os piquetes e preparar os manejos.</p>
+          <p className="cartao-subtitulo">Use “Gerar plano” para o agente analisar os piquetes e preparar os manejos.</p>
         </section>
       ) : null}
 
