@@ -1,0 +1,4 @@
+.dashboard-indicadores { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.dashboard-rotulo { font-size: .85rem; font-weight: 500; color: var(--cor-texto-suave); }
+.dashboard-valor { margin: 4px 0 0; font-size: 2rem; font-weight: 600; line-height: 1.2; }
+.dashboard-secao { display: grid; gap: 12px; min-width: 0; }

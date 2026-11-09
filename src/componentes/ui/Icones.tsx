@@ -12,6 +12,7 @@ export type NomeIcone =
   | "calendario"
   | "pergunta"
   | "chuva"
+  | "painel"
   | "seta-direita";
 
 const CAMINHOS: Record<NomeIcone, string[]> = {
@@ -67,6 +68,7 @@ const CAMINHOS: Record<NomeIcone, string[]> = {
     "M8 14v6",
     "M12 16v6",
   ],
+  painel: ["M18 20V10", "M12 20V4", "M6 20v-6"],
   "seta-direita": ["M5 12h14", "M12 5l7 7-7 7"],
 };
 

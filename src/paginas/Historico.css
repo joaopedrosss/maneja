@@ -1,0 +1,6 @@
+.historico-lista { list-style: none; display: grid; gap: 12px; margin: 0; padding: 0; }
+.historico-item { display: grid; gap: 6px; overflow-wrap: anywhere; }
+.historico-item p { margin: 0; }
+.historico-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.historico-data { color: var(--cor-texto-suave); font-size: .8rem; text-transform: capitalize; }
+.historico-troca { font-weight: 500; }

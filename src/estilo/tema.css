@@ -39,6 +39,16 @@
   --cor-sem-leitura: #9a9a9a;
   --cor-ocupado: #1d6fd8;
 
+  /* séries do gráfico: uma cor fixa por piquete, nesta ordem */
+  --cor-serie-1: #2a78d6;
+  --cor-serie-2: #eb6834;
+  --cor-serie-3: #1baf7a;
+  --cor-serie-4: #eda100;
+  --cor-serie-5: #e87ba4;
+  --cor-serie-6: #008300;
+  --cor-serie-7: #4a3aa7;
+  --cor-serie-8: #e34948;
+
   /* selos de confiança */
   --cor-confianca-alta: #0b5a2a;
   --cor-confianca-alta-fundo: #c3e3d2;
@@ -226,6 +236,37 @@ h3 {
   padding: 10px 12px;
   border-radius: var(--raio-pequeno);
   font-size: 0.85rem;
+}
+
+/* ---------- tabela ---------- */
+
+.tabela-rolagem {
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabela th,
+.tabela td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--cor-borda);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tabela th {
+  color: var(--cor-texto-suave);
+  font-weight: 500;
+}
+
+.tabela th:first-child,
+.tabela td:first-child {
+  text-align: left;
 }
 
 /* ---------- página ---------- */
