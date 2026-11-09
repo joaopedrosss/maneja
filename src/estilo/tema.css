@@ -32,12 +32,12 @@
   --cor-cartao-escuro-item: #304738;
   --cor-cartao-escuro-texto: #ffffff;
 
-  /* estados do piquete (mapa) */
-  --cor-pronto: #008734;
-  --cor-crescendo: #f2c200;
+  /* escala de NDVI (mapa): hex #rrggbb, interpolados em JS */
+  --cor-ndvi-baixo: #d7191c;
+  --cor-ndvi-medio: #ffe680;
+  --cor-ndvi-alto: #2c7bb6;
+  --cor-sem-leitura: #9a9a9a;
   --cor-ocupado: #1d6fd8;
-  --cor-sair: #d92d20;
-  --cor-sem-estimativa: #9a9a9a;
 
   /* selos de confiança */
   --cor-confianca-alta: #0b5a2a;

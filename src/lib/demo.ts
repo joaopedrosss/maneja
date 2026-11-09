@@ -5,15 +5,9 @@
 import type { Base } from "./agente";
 import { somarDias } from "./datas";
 import { areaHa, poligonoEmMetros } from "./geo";
-import type { Cultivar, Fazenda, GeoJsonPolygon, Lote, Medicao, Piquete } from "./tipos";
+import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lote, Piquete } from "./tipos";
 
 export const USUARIO = { nome: "Técnico Maneja", email: "tecnico@maneja.app" };
-
-const CULTIVARES: Cultivar[] = [
-  { id: "marandu", nome: "Marandu", altura_entrada_cm: 30, altura_saida_cm: 15, crescimento_cm_dia: 1.3, altura_maxima_cm: 80 },
-  { id: "mombaca", nome: "Mombaça", altura_entrada_cm: 90, altura_saida_cm: 45, crescimento_cm_dia: 3.2, altura_maxima_cm: 160 },
-  { id: "tifton", nome: "Tifton 85", altura_entrada_cm: 25, altura_saida_cm: 10, crescimento_cm_dia: 1.4, altura_maxima_cm: 50 },
-];
 
 const ORIGEM_MARCINHO: [number, number] = [-9.6205, -35.9695];
 const ORIGEM_BOA_VISTA: [number, number] = [-9.6125, -35.9835];
@@ -22,10 +16,19 @@ function piquete(
   id: string,
   fazenda_id: string,
   nome: string,
-  cultivar_id: string,
+  vegetacao: string,
   geometria: GeoJsonPolygon,
 ): Piquete {
-  return { id, fazenda_id, nome, cultivar_id, geometria, area_ha: areaHa(geometria), metodo_pastejo: "rotacionado" };
+  return { id, fazenda_id, nome, vegetacao, geometria, area_ha: areaHa(geometria) };
+}
+
+// Uma leitura por semana; `valores` vai da mais antiga para a mais recente.
+function serie(piquete_id: string, hoje: string, ultimaHaDias: number, valores: number[]): LeituraNdvi[] {
+  return valores.map((valor, i) => ({
+    piquete_id,
+    data: somarDias(hoje, -ultimaHaDias - 7 * (valores.length - 1 - i)),
+    valor,
+  }));
 }
 
 export function baseInicial(hoje: string): Base {
@@ -45,18 +48,18 @@ export function baseInicial(hoje: string): Base {
   ];
 
   const piquetes: Piquete[] = [
-    piquete("pq-abobora", "faz-marcinho", "Piquete Abóbora", "marandu",
+    piquete("pq-abobora", "faz-marcinho", "Piquete Abóbora", "Marandu",
       poligonoEmMetros(ORIGEM_MARCINHO, [[-250, -10], [-150, 130], [-40, 95], [70, 20], [-15, -165]])),
-    piquete("pq-jerimum", "faz-marcinho", "Piquete Jerimum", "marandu",
+    piquete("pq-jerimum", "faz-marcinho", "Piquete Jerimum", "Marandu",
       poligonoEmMetros(ORIGEM_MARCINHO, [[70, 20], [190, -55], [105, -240], [-15, -165]])),
-    piquete("pq-macarrao", "faz-marcinho", "Piquete Macarrão", "marandu",
+    piquete("pq-macarrao", "faz-marcinho", "Piquete Macarrão", "Marandu",
       poligonoEmMetros(ORIGEM_MARCINHO, [[-130, 165], [-20, 390], [270, 225], [160, 0], [80, 45], [-35, 125]])),
 
-    piquete("pq-baixa", "faz-boa-vista", "Piquete da Baixa", "mombaca",
+    piquete("pq-baixa", "faz-boa-vista", "Piquete da Baixa", "Mombaça",
       poligonoEmMetros(ORIGEM_BOA_VISTA, [[-200, -120], [-200, 110], [0, 110], [0, -120]])),
-    piquete("pq-alto", "faz-boa-vista", "Piquete do Alto", "mombaca",
+    piquete("pq-alto", "faz-boa-vista", "Piquete do Alto", "Mombaça",
       poligonoEmMetros(ORIGEM_BOA_VISTA, [[0, -120], [0, 110], [190, 130], [210, -110]])),
-    piquete("pq-acude", "faz-boa-vista", "Piquete do Açude", "tifton",
+    piquete("pq-acude", "faz-boa-vista", "Piquete do Açude", "Tifton 85",
       poligonoEmMetros(ORIGEM_BOA_VISTA, [[-200, 110], [-160, 260], [60, 250], [0, 110]])),
   ];
 
@@ -67,13 +70,13 @@ export function baseInicial(hoje: string): Base {
       piquete_atual_id: "pq-baixa", desde: somarDias(hoje, -4) },
   ];
 
-  const medicoes: Medicao[] = [
-    { piquete_id: "pq-abobora", data: somarDias(hoje, -6), altura_cm: 30, origem: "campo" },
-    { piquete_id: "pq-jerimum", data: somarDias(hoje, -12), altura_cm: 25, origem: "campo" },
-    { piquete_id: "pq-macarrao", data: somarDias(hoje, -20), altura_cm: 70, origem: "campo" },
-    { piquete_id: "pq-baixa", data: somarDias(hoje, -4), altura_cm: 62, origem: "campo" },
-    { piquete_id: "pq-alto", data: somarDias(hoje, -5), altura_cm: 84, origem: "campo" },
+  const ndvi: LeituraNdvi[] = [
+    ...serie("pq-abobora", hoje, 2, [0.66, 0.63, 0.6, 0.55, 0.49, 0.44, 0.37, 0.29]),
+    ...serie("pq-jerimum", hoje, 2, [0.7, 0.73, 0.76, 0.78, 0.8, 0.81, 0.83, 0.84]),
+    ...serie("pq-macarrao", hoje, 9, [0.68, 0.7, 0.71, 0.73, 0.72, 0.74, 0.75, 0.76]),
+    ...serie("pq-baixa", hoje, 2, [0.6, 0.58, 0.55, 0.52, 0.5, 0.47, 0.45, 0.42]),
+    ...serie("pq-alto", hoje, 2, [0.4, 0.44, 0.48, 0.52, 0.56, 0.6, 0.63, 0.66]),
   ];
 
-  return { fazendas, cultivares: CULTIVARES, piquetes, lotes, medicoes };
+  return { fazendas, piquetes, lotes, ndvi };
 }

@@ -14,9 +14,6 @@
 .plano-alerta { display: flex; align-items: flex-start; gap: 12px; margin: 0; border: 1px solid var(--cor-alerta-suave); }
 .plano-alerta p { margin: 4px 0; }
 .plano-alerta-icone { font-size: 1.4rem; min-width: 24px; text-align: center; }
-.plano-medicao { border: 1px solid var(--cor-borda); }
-.plano-medicao-campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
-.plano-medicao-campos .campo { flex: 1; min-width: 140px; }
 .plano-vazio { padding-block: 40px; text-align: center; }
 .plano-vazio p { margin-top: 12px; }
 .plano-spinner { width: 16px; height: 16px; border: 2px solid var(--cor-primaria-suave); border-top-color: var(--cor-superficie); border-radius: 50%; animation: plano-girar 1s linear infinite; }
@@ -26,7 +23,6 @@
   .plano-gerar { align-items: flex-start; width: 100%; }
   .plano-gerar .botao { width: 100%; }
   .plano-movimento-topo h4 { min-width: 0; flex-basis: 100%; }
-  .plano-medicao-campos { flex-direction: column; align-items: stretch; }
 }
 .plano-alerta-icone { display: inline-flex; justify-content: center; padding-top: 2px; }
 .plano-alerta-icone .icone { width: 20px; height: 20px; }

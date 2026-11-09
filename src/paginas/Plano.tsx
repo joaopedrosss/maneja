@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { Icone, type NomeIcone } from "../componentes/ui/Icones";
-import { resumoPiquetes } from "../lib/agente";
 import { dataComDia, decimal, fimDoPlano } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
-import type { Confianca, Fazenda, Movimentacao, PedidoValidacao, PlanoManejo, TipoAlerta } from "../lib/tipos";
+import { resumoPiquetes } from "../lib/ndvi";
+import type { Confianca, Fazenda, Movimentacao, PlanoManejo, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
 const CONFIANCA: Record<Confianca, string> = { alta: "alta", media: "média", baixa: "baixa" };
@@ -13,7 +13,6 @@ const ICONES_ALERTA: Record<TipoAlerta, NomeIcone> = {
   passando_do_ponto: "relogio",
   pronto_para_pastejo: "ok",
   falta_capim: "alerta",
-  sem_medicao: "pergunta",
 };
 
 function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[]][] {
@@ -32,10 +31,10 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
 
   const lote = estado.lotes.find((l) => l.id === mov.lote_id);
   const opcoes = fazenda
-    ? resumoPiquetes(estado, fazenda.id, hoje)
-        .filter((r) => r.situacao === "descansando" && r.altura_hoje_cm !== null)
+    ? resumoPiquetes(estado.piquetes.filter((p) => p.fazenda_id === fazenda.id), estado.ndvi, estado.lotes, hoje)
+        .filter((r) => r.situacao === "descansando" && r.ndvi !== null)
         .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== lote?.piquete_atual_id)
-        .sort((a, b) => b.altura_hoje_cm! - a.altura_hoje_cm!)
+        .sort((a, b) => b.ndvi! - a.ndvi!)
     : [];
 
   function confirmar(destinoId?: string): void {
@@ -57,7 +56,9 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
         <span className={`selo selo-${mov.confianca}`}>Confiança {CONFIANCA[mov.confianca]}</span>
       </div>
       <p>{mov.motivo}</p>
-      <p className="plano-previsao">Previsão: {mov.dias_previstos} {mov.dias_previstos === 1 ? "dia" : "dias"} no piquete</p>
+      <p className="plano-previsao">
+        NDVI: {mov.ndvi_origem === null ? "sem leitura" : decimal(mov.ndvi_origem, 2)} → {decimal(mov.ndvi_destino, 2)}
+      </p>
       <p className="cartao-subtitulo">{mov.motivo_confianca}</p>
 
       {realizada ? (
@@ -73,14 +74,12 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
               <option value="" disabled>Selecione…</option>
               {opcoes.map((r) => (
                 <option key={r.piquete_id} value={r.piquete_id}>
-                  {`${r.nome} — ${decimal(r.altura_hoje_cm!, 0)} cm (entrada ${r.altura_entrada_alvo_cm} cm)${
-                    r.altura_hoje_cm! < r.altura_entrada_alvo_cm ? " · abaixo da entrada" : ""
-                  }`}
+                  {`${r.nome} — NDVI ${decimal(r.ndvi!, 2)}`}
                 </option>
               ))}
             </select>
           </label>
-          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete livre com medição.</p> : null}
+          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete livre com leitura de NDVI.</p> : null}
           <div className="formulario-acoes">
             <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => confirmar(destino)}>
               Confirmar com este piquete
@@ -102,48 +101,6 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
       )}
       {erro ? <p className="aviso-erro" role="alert">{erro}</p> : null}
     </article>
-  );
-}
-
-// ---------- medição pedida pelo agente ----------
-
-function Medicao({ pedido, bloqueado }: { pedido: PedidoValidacao; bloqueado: boolean }) {
-  const { hoje, registrarMedicao } = useFazenda();
-  const [altura, setAltura] = useState("");
-  const [data, setData] = useState(hoje);
-  const [salvo, setSalvo] = useState(false);
-
-  function registrar(evento: FormEvent<HTMLFormElement>): void {
-    evento.preventDefault();
-    if (bloqueado || salvo) return;
-    registrarMedicao(pedido.piquete_id, Number(altura), data);
-    setSalvo(true);
-  }
-
-  return (
-    <form className="cartao plano-medicao" onSubmit={registrar}>
-      <h3 className="cartao-titulo">{pedido.piquete_nome}</h3>
-      <p>{pedido.motivo}</p>
-      {salvo ? (
-        <p className="aviso-info" role="status">
-          Medição de {altura} cm registrada. Gere um novo plano para considerar esta medida.
-        </p>
-      ) : (
-        <div className="plano-medicao-campos">
-          <label className="campo">
-            Altura (cm)
-            <input className="campo-entrada" type="number" min={0.1} max={400} step="any" required
-              value={altura} onChange={(e) => setAltura(e.target.value)} disabled={bloqueado} />
-          </label>
-          <label className="campo">
-            Data da medição
-            <input className="campo-entrada" type="date" required max={hoje}
-              value={data} onChange={(e) => setData(e.target.value)} disabled={bloqueado} />
-          </label>
-          <button className="botao botao-primario" disabled={bloqueado} type="submit">Registrar medição</button>
-        </div>
-      )}
-    </form>
   );
 }
 
@@ -182,7 +139,7 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
 
       {gerando ? (
         <p className="aviso-info" role="status">
-          O agente está analisando piquetes, lotes, crescimento do capim e previsão do tempo…
+          O agente está analisando os piquetes, os lotes e as leituras de NDVI…
         </p>
       ) : null}
 
@@ -236,17 +193,6 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
-
-          <section className="plano-secao" aria-label="Medições pedidas">
-            <h2 className="cartao-titulo">Medições pedidas</h2>
-            {plano.pedidos_validacao.length === 0 ? (
-              <p className="cartao-subtitulo">Nenhuma medição pedida neste plano.</p>
-            ) : (
-              plano.pedidos_validacao.map((pedido) => (
-                <Medicao key={`${plano.id}-${pedido.piquete_id}`} pedido={pedido} bloqueado={gerando} />
-              ))
             )}
           </section>
         </>

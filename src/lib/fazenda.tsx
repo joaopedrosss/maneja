@@ -1,6 +1,6 @@
 // Estado da aplicação de demonstração (substitui a API e o banco).
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
-import { gerarPlano as gerarPlanoAgente, alturaEm, type Base } from "./agente";
+import { gerarPlano as gerarPlanoAgente, type Base } from "./agente";
 import { hojeNaFazenda } from "./datas";
 import { baseInicial, USUARIO } from "./demo";
 import { areaHa } from "./geo";
@@ -14,10 +14,8 @@ export type DadosFazenda = Pick<Fazenda, "nome">;
 
 export interface NovoPiquete {
   nome: string;
-  cultivar_id: string;
+  vegetacao: string;
   geometria: GeoJsonPolygon;
-  altura_cm: number;
-  data_medicao: string;
 }
 
 interface Contexto {
@@ -31,7 +29,6 @@ interface Contexto {
   criarPiquete: (dados: NovoPiquete) => string;
   atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => void;
   desativarPiquete: (piqueteId: string) => string | null;
-  registrarMedicao: (piqueteId: string, alturaCm: number, data: string) => void;
   gerarPlano: () => Promise<PlanoManejo>;
   executarMovimentacao: (movimentacaoId: string, destinoId?: string) => string | null;
 }
@@ -82,15 +79,10 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
           id,
           fazenda_id: fazendaId,
           nome: dados.nome.trim(),
-          cultivar_id: dados.cultivar_id,
+          vegetacao: dados.vegetacao.trim(),
           geometria: dados.geometria,
           area_ha: areaHa(dados.geometria),
-          metodo_pastejo: "rotacionado",
         },
-      ],
-      medicoes: [
-        ...e.medicoes,
-        { piquete_id: id, data: dados.data_medicao, altura_cm: dados.altura_cm, origem: "campo" },
       ],
     }));
     return id;
@@ -112,16 +104,9 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  function registrarMedicao(piqueteId: string, alturaCm: number, data: string): void {
-    alterar((e) => ({
-      ...e,
-      medicoes: [...e.medicoes, { piquete_id: piqueteId, data, altura_cm: alturaCm, origem: "campo" }],
-    }));
-  }
-
   async function gerarPlano(): Promise<PlanoManejo> {
     const alvo = fazendaId;
-    await espera(1600); // simula a consulta a dados, clima e o tempo de análise do agente
+    await espera(1600); // simula a consulta ao NDVI e o tempo de análise do agente
     const plano = gerarPlanoAgente(atual.current, alvo, hoje);
     alterar((e) => ({ ...e, planos: { ...e.planos, [alvo]: plano } }));
     return plano;
@@ -142,16 +127,8 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     if (outro) return `${destino.nome} já está ocupado pelo ${outro.nome}.`;
     if (lote.piquete_atual_id === destino.id) return `${lote.nome} já está em ${destino.nome}.`;
 
-    // fixa a altura estimada de hoje como ponto de partida das próximas estimativas
-    const marcos = [lote.piquete_atual_id, destino.id]
-      .map((id) => e.piquetes.find((p) => p.id === id))
-      .filter((p) => p !== undefined)
-      .map((p) => ({ piquete_id: p.id, data: hoje, altura_cm: alturaEm(e, p, hoje), origem: "estimativa" as const }))
-      .filter((m): m is typeof m & { altura_cm: number } => m.altura_cm !== null);
-
     alterar((s) => ({
       ...s,
-      medicoes: [...s.medicoes, ...marcos],
       lotes: s.lotes.map((l) => (l.id === lote.id ? { ...l, piquete_atual_id: destino.id, desde: hoje } : l)),
       planos: {
         ...s.planos,
@@ -187,7 +164,6 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
         criarPiquete,
         atualizarGeometria,
         desativarPiquete,
-        registrarMedicao,
         gerarPlano,
         executarMovimentacao,
       }}

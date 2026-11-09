@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { MapContainer, Polygon, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "@geoman-io/leaflet-geoman-free";
-import { resumoPiquetes } from "../lib/agente";
 import { dataComDia, dataCurta, decimal } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
 import { centro } from "../lib/geo";
+import { corDoNdvi, NDVI_ESCALA_MAX, NDVI_ESCALA_MIN, resumoPiquetes } from "../lib/ndvi";
 import type { Fazenda, GeoJsonPolygon, Piquete, ResumoPiquete } from "../lib/tipos";
 import "./Mapa.css";
 
@@ -18,13 +18,9 @@ function posicoes(geometria: GeoJsonPolygon): [number, number][] {
   return geometria.coordinates[0].map((c) => [c[1], c[0]] as [number, number]);
 }
 
-function corDoPiquete(resumo: ResumoPiquete | undefined, temPlano: boolean): string {
-  if (!temPlano || !resumo || resumo.altura_hoje_cm === null) return corDoTema("--cor-sem-estimativa");
-  const h = resumo.altura_hoje_cm;
-  if (resumo.situacao === "ocupado") {
-    return h <= resumo.altura_saida_alvo_cm ? corDoTema("--cor-sair") : corDoTema("--cor-ocupado");
-  }
-  return h >= resumo.altura_entrada_alvo_cm ? corDoTema("--cor-pronto") : corDoTema("--cor-crescendo");
+function corDoPiquete(resumo: ResumoPiquete | undefined): string {
+  if (!resumo || resumo.ndvi === null) return corDoTema("--cor-sem-leitura");
+  return corDoNdvi(resumo.ndvi, corDoTema("--cor-ndvi-baixo"), corDoTema("--cor-ndvi-medio"), corDoTema("--cor-ndvi-alto"));
 }
 
 // ---------- controles dentro do mapa ----------
@@ -113,15 +109,12 @@ function BuscaCoordenadas() {
 function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
   const { estado, hoje, criarPiquete, atualizarGeometria, desativarPiquete } = useFazenda();
   const piquetes = estado.piquetes.filter((p) => p.fazenda_id === fazenda.id);
-  const resumos = resumoPiquetes(estado, fazenda.id, hoje);
+  const resumos = resumoPiquetes(piquetes, estado.ndvi, estado.lotes, hoje);
   const plano = estado.planos[fazenda.id];
-  const temPlano = plano !== undefined;
 
   const [novaGeometria, setNovaGeometria] = useState<GeoJsonPolygon | null>(null);
   const [nome, setNome] = useState("");
-  const [cultivarId, setCultivarId] = useState("marandu");
-  const [alturaCm, setAlturaCm] = useState("");
-  const [dataMedida, setDataMedida] = useState(hoje);
+  const [vegetacao, setVegetacao] = useState("");
 
   const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -141,15 +134,9 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
   function salvarNovo(evento: FormEvent<HTMLFormElement>): void {
     evento.preventDefault();
     if (!novaGeometria) return;
-    const id = criarPiquete({
-      nome,
-      cultivar_id: cultivarId,
-      geometria: novaGeometria,
-      altura_cm: Number.parseFloat(alturaCm),
-      data_medicao: dataMedida,
-    });
+    const id = criarPiquete({ nome, vegetacao, geometria: novaGeometria });
     setNovaGeometria(null);
-    setAlturaCm("");
+    setVegetacao("");
     setSelecionadoId(id);
   }
 
@@ -203,8 +190,8 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
 
           {piquetes.map((p) => {
             const resumo = resumos.find((r) => r.piquete_id === p.id);
-            const cor = corDoPiquete(resumo, temPlano);
-            const altura = temPlano && resumo?.altura_hoje_cm != null ? ` · ${decimal(resumo.altura_hoje_cm, 1)} cm` : "";
+            const cor = corDoPiquete(resumo);
+            const rotuloNdvi = resumo?.ndvi != null ? ` · NDVI ${decimal(resumo.ndvi, 2)}` : "";
             return (
               <Polygon
                 key={p.id}
@@ -221,10 +208,10 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                 eventHandlers={{ click: () => setSelecionadoId(p.id) }}
               >
                 <Tooltip permanent direction="center" className="tooltip-piquete">
-                  <div className="tooltip-titulo">{p.nome}{altura}</div>
+                  <div className="tooltip-titulo">{p.nome}{rotuloNdvi}</div>
                   {resumo ? (
                     <div className="tooltip-detalhes">
-                      Capim: {resumo.cultivar_nome}<br />
+                      Capim: {resumo.vegetacao}<br />
                       Situação: {resumo.situacao}<br />
                       {resumo.lote_atual_nome ? <>Lote: {resumo.lote_atual_nome}<br /></> : null}
                       Confiança: {resumo.confianca} ({resumo.motivo_confianca})
@@ -251,11 +238,13 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
         </MapContainer>
 
         <div className="legenda-mapa">
-          <div className="legenda-item"><div className="legenda-cor sem-estimativa"></div> Sem estimativa</div>
-          <div className="legenda-item"><div className="legenda-cor sair"></div> Precisa sair</div>
-          <div className="legenda-item"><div className="legenda-cor ocupado"></div> Com gado</div>
-          <div className="legenda-item"><div className="legenda-cor pronto"></div> Pronto para entrar</div>
-          <div className="legenda-item"><div className="legenda-cor crescendo"></div> Crescendo</div>
+          <div className="legenda-titulo">NDVI mais recente</div>
+          <div className="legenda-gradiente" />
+          <div className="legenda-escala">
+            <span>≤ {decimal(NDVI_ESCALA_MIN, 1)} pior</span>
+            <span>≥ {decimal(NDVI_ESCALA_MAX, 1)} melhor</span>
+          </div>
+          <div className="legenda-item"><div className="legenda-cor sem-leitura"></div> Sem leitura</div>
         </div>
       </div>
 
@@ -271,24 +260,8 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                 <input required type="text" value={nome} onChange={(e) => setNome(e.target.value)} />
               </label>
               <label>
-                Capim
-                <select value={cultivarId} onChange={(e) => setCultivarId(e.target.value)} required>
-                  {estado.cultivares.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Método
-                <input type="text" value="Rotacionado" disabled />
-              </label>
-              <label>
-                Altura média medida (cm)
-                <input required type="number" min={0.1} step="0.1" value={alturaCm} onChange={(e) => setAlturaCm(e.target.value)} />
-              </label>
-              <label>
-                Data da medida
-                <input required type="date" max={hoje} value={dataMedida} onChange={(e) => setDataMedida(e.target.value)} />
+                Vegetação (espécie ou tipo de capim)
+                <input required type="text" placeholder="Marandu" value={vegetacao} onChange={(e) => setVegetacao(e.target.value)} />
               </label>
               <div className="acoes-formulario">
                 <button type="submit" className="botao-acao">Salvar</button>
@@ -299,7 +272,6 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
         ) : (
           <div>
             <h2>Piquetes ({piquetes.length})</h2>
-            {!temPlano ? <p className="texto-suave">Ainda não há plano para esta fazenda: gere um em “Plano da semana” para ver as estimativas.</p> : null}
             <p className="texto-suave dica-desenho">Para cadastrar um piquete, use a ferramenta de polígono no canto do mapa.</p>
             <ul className="lista-piquetes">
               {piquetes.map((p) => {
@@ -307,12 +279,11 @@ function MapaDaFazenda({ fazenda }: { fazenda: Fazenda }) {
                 return (
                   <li key={p.id} className={`item-piquete ${selecionadoId === p.id ? "ativo" : ""}`} onClick={() => setSelecionadoId(p.id)}>
                     <h3>{p.nome}</h3>
-                    <p>{r?.cultivar_nome} · {p.metodo_pastejo} · {decimal(p.area_ha, 2)} ha</p>
+                    <p>{r?.vegetacao} · {decimal(p.area_ha, 2)} ha</p>
                     <p>Situação: {r?.situacao}{r?.lote_atual_nome ? ` (${r.lote_atual_nome})` : ""}</p>
-                    {r?.ultima_medicao_campo ? (
-                      <p>Última medida: {decimal(r.ultima_medicao_campo.altura_cm, 0)} cm em {dataCurta(r.ultima_medicao_campo.data)}</p>
-                    ) : <p>Sem medição em campo</p>}
-                    {temPlano && r?.altura_hoje_cm != null ? <p>Estimativa hoje: {decimal(r.altura_hoje_cm, 1)} cm</p> : null}
+                    {r?.ndvi != null && r.data_ndvi ? (
+                      <p>NDVI: {decimal(r.ndvi, 2)} em {dataCurta(r.data_ndvi)}</p>
+                    ) : <p>Sem leitura de NDVI</p>}
 
                     {selecionadoId === p.id ? (
                       <div className="acoes-piquete">
