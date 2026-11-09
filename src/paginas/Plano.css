@@ -35,3 +35,8 @@
 .plano-feito a { color: inherit; font-weight: 600; }
 .aviso-alerta a, .aviso-info a { color: inherit; font-weight: 600; }
 .plano-pagina > .aviso-info, .plano-pagina > .aviso-alerta { margin: 0; }
+.plano-clima-dias { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
+.plano-clima-dia { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); font-size: .85rem; }
+.plano-clima-data { color: var(--cor-texto-suave); font-size: .75rem; text-transform: capitalize; }
+.plano-clima-forte { background: var(--cor-alerta-suave); border-color: var(--cor-alerta); color: var(--cor-alerta); }
+.plano-clima-forte .plano-clima-data { color: inherit; }

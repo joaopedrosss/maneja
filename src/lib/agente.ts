@@ -1,16 +1,18 @@
 // Agente de manejo (versão de demonstração).
 // Roda no navegador com regras simples sobre a leitura de NDVI mais recente de
-// cada piquete: decide quais lotes precisam sair e para onde devem ir.
+// cada piquete e a previsão do tempo: decide quais lotes precisam sair e para onde devem ir.
 
-import { decimal } from "./datas";
+import { CHUVA_FORTE_MM, resumoClima } from "./clima";
+import { dataComDia, decimal } from "./datas";
 import { confiancaDaLeitura, motivoConfianca, ultimaLeitura } from "./ndvi";
-import type { Alerta, Fazenda, LeituraNdvi, Lote, Movimentacao, Piquete, PlanoManejo } from "./tipos";
+import type { Alerta, Fazenda, LeituraNdvi, Lote, Movimentacao, Piquete, PlanoManejo, PrevisaoClima } from "./tipos";
 
 export interface Base {
   fazendas: Fazenda[];
   piquetes: Piquete[];
   lotes: Lote[];
   ndvi: LeituraNdvi[];
+  clima: PrevisaoClima;
 }
 
 const HORIZONTE_DIAS = 7;
@@ -18,6 +20,7 @@ const NDVI_SAIDA = 0.35; // abaixo disto o gado precisa sair
 const NDVI_ENTRADA = 0.5; // a partir disto o piquete pode receber gado
 const NDVI_PASSANDO = 0.8; // acima disto o capim está passando do ponto
 const NDVI_FALTA = 0.3; // abaixo disto falta capim
+const SEMANA_SECA_MM = 5; // chuva total da semana abaixo disto
 
 let sequencia = 0;
 function novoId(prefixo: string): string {
@@ -39,6 +42,10 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
   const movimentacoes: Movimentacao[] = [];
   const alertas: Alerta[] = [];
   const nome = (id: string) => piquetes.find((p) => p.id === id)!.nome;
+
+  // não se move gado em dia de chuva forte: usa o primeiro dia sem ela
+  const dataManejo = base.clima.dias.find((d) => d.chuva_mm < CHUVA_FORTE_MM)?.data ?? hoje;
+  const avisoChuva = dataManejo === hoje ? "" : ` Adiado para ${dataComDia(dataManejo)} por causa da chuva forte.`;
 
   // lotes nos piquetes com NDVI mais baixo escolhem primeiro
   const fila = [...lotes].sort((a, b) => (valor(a.piquete_atual_id) ?? -1) - (valor(b.piquete_atual_id) ?? -1));
@@ -70,7 +77,7 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
     const ndviDestino = valor(destino.id)!;
     movimentacoes.push({
       id: novoId("mov"),
-      data: hoje,
+      data: dataManejo,
       lote_id: lote.id,
       lote_nome: lote.nome,
       n_animais: lote.n_animais,
@@ -80,7 +87,7 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
       piquete_destino_nome: destino.nome,
       ndvi_origem: ndviOrigem,
       ndvi_destino: ndviDestino,
-      motivo: `${motivoSaida}. ${destino.nome} é o piquete livre com NDVI mais alto: ${decimal(ndviDestino, 2)}.`,
+      motivo: `${motivoSaida}. ${destino.nome} é o piquete livre com NDVI mais alto: ${decimal(ndviDestino, 2)}.${avisoChuva}`,
       ...conf(destino.id),
       motivo_confianca: `${motivoConfianca(leitura(destino.id), hoje)} no destino`,
       status: "pendente",
@@ -103,6 +110,27 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
       alertas.push({ tipo: "pronto_para_pastejo", data: hoje, texto: `${p.nome} está pronto para pastejo: NDVI ${decimal(ndvi, 2)}.`, ...conf(p.id) });
     }
   }
+
+  const clima = resumoClima(base.clima);
+  const confClima = { confianca: "media" as const, motivo_confianca: "previsão do tempo de 7 dias" };
+  for (const d of clima.dias_chuva_forte) {
+    alertas.push({
+      tipo: "alerta_clima",
+      data: d.data,
+      texto: `Chuva forte prevista: ${decimal(d.chuva_mm, 0)} mm. Evite mover o gado neste dia.`,
+      ...confClima,
+    });
+  }
+  if (clima.chuva_total_mm < SEMANA_SECA_MM) {
+    alertas.push({
+      tipo: "alerta_clima",
+      data: hoje,
+      texto: `Semana seca: só ${decimal(clima.chuva_total_mm, 0)} mm previstos. O pasto deve rebrotar devagar.`,
+      ...confClima,
+    });
+  }
+
+  alertas.sort((a, b) => a.data.localeCompare(b.data));
 
   return {
     id: novoId("plano"),

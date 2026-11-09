@@ -38,6 +38,18 @@ export interface LeituraNdvi {
   valor: number; // 0 … 1
 }
 
+export interface PrevisaoDia {
+  data: string;
+  chuva_mm: number;
+  temp_min_c: number;
+  temp_max_c: number;
+}
+
+export interface PrevisaoClima {
+  fazenda_id: string;
+  dias: PrevisaoDia[]; // 7 dias, a partir de hoje
+}
+
 export type StatusMovimentacao = "pendente" | "realizada";
 
 export interface Movimentacao {
@@ -63,7 +75,8 @@ export type TipoAlerta =
   | "sem_piquete_apto"
   | "passando_do_ponto"
   | "pronto_para_pastejo"
-  | "falta_capim";
+  | "falta_capim"
+  | "alerta_clima";
 
 export interface Alerta {
   tipo: TipoAlerta;

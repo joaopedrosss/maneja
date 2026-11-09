@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Icone, type NomeIcone } from "../componentes/ui/Icones";
+import { CHUVA_FORTE_MM, resumoClima } from "../lib/clima";
 import { dataComDia, decimal, fimDoPlano } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
 import { resumoPiquetes } from "../lib/ndvi";
-import type { Confianca, Fazenda, Movimentacao, PlanoManejo, TipoAlerta } from "../lib/tipos";
+import type { Confianca, Fazenda, Movimentacao, PlanoManejo, PrevisaoClima, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
 const CONFIANCA: Record<Confianca, string> = { alta: "alta", media: "média", baixa: "baixa" };
@@ -13,6 +14,7 @@ const ICONES_ALERTA: Record<TipoAlerta, NomeIcone> = {
   passando_do_ponto: "relogio",
   pronto_para_pastejo: "ok",
   falta_capim: "alerta",
+  alerta_clima: "chuva",
 };
 
 function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[]][] {
@@ -104,6 +106,30 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
   );
 }
 
+// ---------- previsão do tempo ----------
+
+function ResumoClima({ clima }: { clima: PrevisaoClima }) {
+  const resumo = resumoClima(clima);
+  return (
+    <section className="cartao plano-clima" aria-label="Previsão do tempo">
+      <h2 className="cartao-titulo">Previsão da semana</h2>
+      <p className="cartao-subtitulo">
+        {decimal(resumo.chuva_total_mm, 0)} mm de chuva · {resumo.temp_min_c} a {resumo.temp_max_c} °C
+        {resumo.dias_chuva_forte.length > 0 ? ` · ${resumo.dias_chuva_forte.length} com chuva forte` : ""}
+      </p>
+      <ul className="plano-clima-dias">
+        {clima.dias.map((d) => (
+          <li key={d.data} className={d.chuva_mm >= CHUVA_FORTE_MM ? "plano-clima-dia plano-clima-forte" : "plano-clima-dia"}>
+            <span className="plano-clima-data">{dataComDia(d.data)}</span>
+            <strong>{decimal(d.chuva_mm, 0)} mm</strong>
+            <span>{d.temp_min_c}–{d.temp_max_c} °C</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // ---------- página ----------
 
 function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
@@ -139,9 +165,11 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
 
       {gerando ? (
         <p className="aviso-info" role="status">
-          O agente está analisando os piquetes, os lotes e as leituras de NDVI…
+          O agente está analisando os piquetes, os lotes, as leituras de NDVI e a previsão do tempo…
         </p>
       ) : null}
+
+      <ResumoClima clima={estado.clima} />
 
       {plano && geracao ? (
         <p className="plano-periodo">

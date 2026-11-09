@@ -5,7 +5,7 @@
 import type { Base } from "./agente";
 import { somarDias } from "./datas";
 import { areaHa, poligonoEmMetros } from "./geo";
-import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lote, Piquete } from "./tipos";
+import type { Fazenda, GeoJsonPolygon, LeituraNdvi, Lote, Piquete, PrevisaoClima } from "./tipos";
 
 export const USUARIO = { nome: "Técnico Maneja", email: "tecnico@maneja.app" };
 
@@ -78,5 +78,18 @@ export function baseInicial(hoje: string): Base {
     ...serie("pq-alto", hoje, 2, [0.4, 0.44, 0.48, 0.52, 0.56, 0.6, 0.63, 0.66]),
   ];
 
-  return { fazendas, piquetes, lotes, ndvi };
+  const chuvas = [0, 2, 48, 12, 0, 0, 5];
+  const minimas = [22, 22, 21, 21, 22, 23, 23];
+  const maximas = [31, 30, 26, 27, 30, 32, 31];
+  const clima: PrevisaoClima = {
+    fazenda_id: "faz-marcinho",
+    dias: chuvas.map((chuva_mm, i) => ({
+      data: somarDias(hoje, i),
+      chuva_mm,
+      temp_min_c: minimas[i],
+      temp_max_c: maximas[i],
+    })),
+  };
+
+  return { fazendas, piquetes, lotes, ndvi, clima };
 }

@@ -106,7 +106,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
 
   async function gerarPlano(): Promise<PlanoManejo> {
     const alvo = fazendaId;
-    await espera(1600); // simula a consulta ao NDVI e o tempo de análise do agente
+    await espera(1600); // simula a consulta ao NDVI, ao clima e o tempo de análise do agente
     const plano = gerarPlanoAgente(atual.current, alvo, hoje);
     alterar((e) => ({ ...e, planos: { ...e.planos, [alvo]: plano } }));
     return plano;
