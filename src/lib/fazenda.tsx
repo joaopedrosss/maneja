@@ -10,13 +10,7 @@ export interface EstadoDemo extends Base {
   planos: Record<string, PlanoManejo>; // fazenda_id → plano atual
 }
 
-export type DadosFazenda = Pick<
-  Fazenda,
-  | "nome"
-  | "funcionarios_disponiveis"
-  | "animais_por_funcionario_dia"
-  | "dias_preferenciais_manejo"
->;
+export type DadosFazenda = Pick<Fazenda, "nome">;
 
 export interface NovoPiquete {
   nome: string;

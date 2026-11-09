@@ -35,18 +35,12 @@ export function baseInicial(hoje: string): Base {
       cliente_nome: "Cliente Marcinho",
       nome: "Fazenda do Marcinho",
       timezone: "America/Maceio",
-      funcionarios_disponiveis: 2,
-      animais_por_funcionario_dia: 20,
-      dias_preferenciais_manejo: [0, 1, 2, 3, 4],
     },
     {
       id: "faz-boa-vista",
       cliente_nome: "Cliente Ana Lúcia",
       nome: "Sítio Boa Vista",
       timezone: "America/Maceio",
-      funcionarios_disponiveis: 2,
-      animais_por_funcionario_dia: 20,
-      dias_preferenciais_manejo: [0, 3],
     },
   ];
 

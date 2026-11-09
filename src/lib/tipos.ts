@@ -7,9 +7,6 @@ export interface Fazenda {
   cliente_nome: string;
   nome: string;
   timezone: string;
-  funcionarios_disponiveis: number;
-  animais_por_funcionario_dia: number;
-  dias_preferenciais_manejo: number[]; // 0 = segunda … 6 = domingo
 }
 
 export interface Cultivar {
@@ -77,8 +74,6 @@ export interface Movimentacao {
 
 export type TipoAlerta =
   | "sem_piquete_apto"
-  | "capacidade_excedida"
-  | "sem_dia_de_manejo"
   | "passando_do_ponto"
   | "pronto_para_pastejo"
   | "falta_capim"

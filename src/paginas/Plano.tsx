@@ -10,8 +10,6 @@ import "./Plano.css";
 const CONFIANCA: Record<Confianca, string> = { alta: "alta", media: "média", baixa: "baixa" };
 const ICONES_ALERTA: Record<TipoAlerta, NomeIcone> = {
   sem_piquete_apto: "alerta",
-  capacidade_excedida: "clientes",
-  sem_dia_de_manejo: "calendario",
   passando_do_ponto: "relogio",
   pronto_para_pastejo: "ok",
   falta_capim: "alerta",

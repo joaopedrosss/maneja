@@ -29,5 +29,4 @@ O mapa de satélite (Esri) precisa de internet.
    - A movimentação é registrada e o mapa se atualiza.
    - Em *Medições pedidas*, registre a altura do Macarrão (ex.: 65 cm) e gere o plano de novo: a confiança sobe.
 3. **Gerar plano**: o plano é gerado e aparece na tela.
-4. **Fazenda**: mude a equipe para 1 pessoa × 10 animais e gere o plano: aparece o alerta de capacidade.
-5. Troque para o **Sítio Boa Vista** no seletor do menu. A fazenda ainda não tem plano, então os piquetes ficam cinza. Use *Gerar plano*. O Piquete do Açude continua cinza porque não tem medição.
+4. Troque para o **Sítio Boa Vista** no seletor do menu. A fazenda ainda não tem plano, então os piquetes ficam cinza. Use *Gerar plano*. O Piquete do Açude continua cinza porque não tem medição.

@@ -2,7 +2,7 @@
 // Roda no navegador com regras simples: estima a altura do capim a partir da última
 // medição, simula os próximos dias e recomenda para onde cada lote deve ir.
 
-import { dataComDia, dataCurta, decimal, diaDaSemana, diasEntre, haQuanto, somarDias } from "./datas";
+import { dataCurta, decimal, diasEntre, haQuanto, somarDias } from "./datas";
 import type {
   Alerta,
   Confianca,
@@ -131,15 +131,7 @@ function novoId(prefixo: string): string {
   return `${prefixo}-${Date.now().toString(36)}-${sequencia}`;
 }
 
-function proximoDiaDeManejo(fazenda: Fazenda, depoisDe: string): number {
-  for (let k = 1; k <= 7; k++) {
-    if (fazenda.dias_preferenciais_manejo.includes(diaDaSemana(somarDias(depoisDe, k)))) return k;
-  }
-  return 7;
-}
-
 export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = new Date()): PlanoManejo {
-  const fazenda = base.fazendas.find((f) => f.id === fazendaId)!;
   const piquetes = base.piquetes.filter((p) => p.fazenda_id === fazendaId);
   const lotes = base.lotes.filter((l) => l.fazenda_id === fazendaId);
   const porId = new Map(piquetes.map((p) => [p.id, p]));
@@ -170,7 +162,6 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
     jaAlertado.add(chave);
     alertas.push(alerta);
   };
-  const capacidadeDia = fazenda.funcionarios_disponiveis * fazenda.animais_por_funcionario_dia;
 
   const uaEm = (piqueteId: string) =>
     lotes.filter((l) => ondeEsta.get(l.id) === piqueteId).reduce((s, l) => s + uaDoLote(l), 0);
@@ -180,8 +171,6 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
     const data = somarDias(hoje, d);
     for (const p of piquetes) historicoAltura.get(p.id)!.push(altura.get(p.id) ?? NaN);
 
-    const podeManejar = fazenda.dias_preferenciais_manejo.includes(diaDaSemana(data));
-    let movidosHoje = 0;
 
     // lotes mais apertados primeiro
     const fila = [...lotes].sort((a, b) => {
@@ -205,21 +194,11 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
         const hOrigem = altura.get(origem);
         if (hOrigem === undefined) continue; // sem medição: não dá para estimar
         const c = cultivar(origem);
-        const k = proximoDiaDeManejo(fazenda, data);
-        const hNoProximo = projetar(hOrigem, c, porId.get(origem)!.area_ha, uaEm(origem), k);
-        precisaSair = hNoProximo <= c.altura_saida_cm;
-        motivoSaida = `${nome(origem)} está com ${decimal(hOrigem, 0)} cm e chega à altura de saída (${c.altura_saida_cm} cm) antes do próximo dia de manejo`;
-        if (!podeManejar && hOrigem <= c.altura_saida_cm - 3) {
-          alertar(`dia-${lote.id}`, {
-            tipo: "sem_dia_de_manejo",
-            data,
-            texto: `${lote.nome} já passou da altura de saída em ${nome(origem)}, mas ${dataComDia(data)} não é dia de mexer no gado.`,
-            confianca: confiancaPelaIdade(idadeCampo.get(origem) ?? null),
-            motivo_confianca: motivoConfianca(idadeCampo.get(origem) ?? null),
-          });
-        }
+        const hAmanha = projetar(hOrigem, c, porId.get(origem)!.area_ha, uaEm(origem), 1);
+        precisaSair = hAmanha <= c.altura_saida_cm;
+        motivoSaida = `${nome(origem)} está com ${decimal(hOrigem, 0)} cm e chega à altura de saída (${c.altura_saida_cm} cm) até amanhã`;
       }
-      if (!precisaSair || !podeManejar) continue;
+      if (!precisaSair) continue;
 
       const candidatos = piquetes
         .filter((p) => p.id !== origem && !ocupado(p.id) && altura.has(p.id))
@@ -236,17 +215,6 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
         });
         continue;
       }
-      if (lote.n_animais > capacidadeDia - movidosHoje) {
-        alertar(`cap-${lote.id}`, {
-          tipo: "capacidade_excedida",
-          data,
-          texto: `${lote.nome} (${lote.n_animais} animais) precisa mudar de piquete, mas a equipe só move ${capacidadeDia} animais por dia.`,
-          confianca: "alta",
-          motivo_confianca: "dados do cadastro da fazenda",
-        });
-        continue;
-      }
-
       const destino = candidatos[0];
       const cDest = cultivar(destino.id);
       const hDest = altura.get(destino.id)!;
@@ -276,7 +244,6 @@ export function gerarPlano(base: Base, fazendaId: string, hoje: string, agora = 
         destino_trocado: false,
       });
       ondeEsta.set(lote.id, destino.id);
-      movidosHoje += lote.n_animais;
     }
 
     // avança um dia
