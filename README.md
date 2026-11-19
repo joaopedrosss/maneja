@@ -1,12 +1,43 @@
-# Maneja — Manejo Inteligente de Bois (protótipo)
+# Maneja · Manejo Inteligente de Bois
 
-Ajuda o pecuarista a decidir para qual piquete mover o gado. O NDVI de cada piquete, a previsão do tempo da semana e o rebanho cadastrado entram em um agente que devolve alertas e recomendações. Regras determinísticas validam cada recomendação antes de ela aparecer, e o produtor aceita, troca o destino ou recusa.
+Painel web do manejo rotacionado. Para cada piquete, o Maneja junta:
+- o NDVI (vigor do pasto);
+- o rebanho por categoria (bois, vacas e bezerros);
+- a posição real do gado, pelas coleiras GPS (simuladas no MVP).
+
+Um agente recomenda as movimentações. **As regras decidem e o Gemini só explica.** O sistema confere pelas coleiras se a movimentação aconteceu de fato (planejado × realizado).
+
+O Maneja funciona sozinho. Opcionalmente, ele se integra ao SeuGado/PiqueTech: lê o plano dele e devolve o que as coleiras viram (`docs/02-integracao-seugado.md`).
 
 Telas: **Mapa**, **Plano**, **Rebanho**, **Histórico**, **Dashboard** e **Fazenda**.
 
-Este repositório é só o front-end. Não tem backend, banco, login nem chamadas ao Earth Engine, Open-Meteo ou Gemini. Tudo roda no navegador e recarregar a página volta ao estado inicial.
+## Documentação (SDD)
 
-## Como rodar
+| Onde | O quê |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Regras do projeto para o Claude Code e para a equipe |
+| [`docs/`](docs/) | Visão, decisões, integração com o SeuGado e o plano da AB2 |
+| [`docs/uml/`](docs/uml/) | Os 8 diagramas UML em Mermaid |
+| [`specs/`](specs/) | Uma spec por fatia, com cenários BDD |
+| [`backend/features/`](backend/features/) | Os cenários BDD executáveis (`pytest-bdd`) |
+
+## Backend
+
+Precisa do [uv](https://docs.astral.sh/uv/).
+
+```bash
+cd backend
+uv sync
+uv run pytest                                  # cenários BDD
+uv run uvicorn maneja.api:app --reload         # API em http://localhost:8000 (documentação em /docs)
+MANEJA_SEUGADO_MODO=arquivo uv run uvicorn maneja.api:app --reload   # com o plano de exemplo do SeuGado
+```
+
+## Front-end
+
+O front ainda roda com dados mockados no navegador. A SPEC-010 liga a API.
+
+### Como rodar o front
 
 Precisa do Node.js 20.19 ou mais novo (https://nodejs.org).
 
