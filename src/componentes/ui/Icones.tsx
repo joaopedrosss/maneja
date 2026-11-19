@@ -101,14 +101,20 @@ export function Marca() {
       height="32"
       viewBox="0 0 32 32"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
       aria-hidden="true"
     >
-      <rect x="2" y="2" width="28" height="28" rx="8" />
-      <path d="M12 2v28" />
-      <path d="M12 13h18" />
-      <rect className="marca-destaque" x="15" y="5" width="12" height="5" rx="1.5" stroke="none" />
+      <path
+        d="M4 17 L11 10 L27 13 L28 24 L10 28 Z"
+        fill="var(--cor-primaria-suave)"
+        stroke="var(--cor-primaria)"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17 4 C14.1 4 11.8 6.3 11.8 9.2 C11.8 13.2 17 19.5 17 19.5 C17 19.5 22.2 13.2 22.2 9.2 C22.2 6.3 19.9 4 17 4 Z"
+        fill="var(--cor-destaque)"
+      />
+      <circle cx="17" cy="9.2" r="2" fill="var(--cor-superficie)" />
     </svg>
   );
 }
