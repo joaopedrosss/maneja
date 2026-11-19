@@ -97,6 +97,7 @@ h3 {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   padding: 20px 24px;
+  min-width: 0;
 }
 
 @media (max-width: 640px) {
@@ -296,7 +297,9 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  width: 100%;
   max-width: 960px;
+  min-width: 0;
 }
 
 .pagina-cabecalho {

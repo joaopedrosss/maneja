@@ -16,13 +16,17 @@ interface Props {
 
 export default function GraficoNdvi({ piquetes, ndvi }: Props) {
   const caixa = useRef<HTMLDivElement>(null);
-  const [largura, setLargura] = useState(720);
+  const [largura, setLargura] = useState(320);
   const [ativo, setAtivo] = useState<number | null>(null);
 
   useEffect(() => {
     const el = caixa.current;
     if (!el) return;
-    const observador = new ResizeObserver(() => setLargura(el.clientWidth));
+    const atualizar = () => {
+      if (el.clientWidth > 0) setLargura(el.clientWidth);
+    };
+    atualizar();
+    const observador = new ResizeObserver(atualizar);
     observador.observe(el);
     return () => observador.disconnect();
   }, []);

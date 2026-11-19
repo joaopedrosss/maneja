@@ -219,8 +219,9 @@
     flex-direction: column;
     justify-content: center;
     gap: 3px;
-    padding: 4px 2px;
-    font-size: 0.65rem;
+    padding: 4px 1px;
+    font-size: 0.625rem;
+    letter-spacing: -0.02em;
     line-height: 1.1;
     text-align: center;
     min-width: 0;

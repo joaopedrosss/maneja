@@ -2,8 +2,8 @@
 .grafico-legenda { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; font-size: .85rem; }
 .grafico-legenda li { display: inline-flex; align-items: center; gap: 6px; }
 .grafico-amostra { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; }
-.grafico-area { position: relative; min-width: 0; }
-.grafico-area svg { display: block; outline-offset: 2px; touch-action: pan-y; }
+.grafico-area { position: relative; min-width: 0; width: 100%; overflow: hidden; }
+.grafico-area svg { display: block; max-width: 100%; outline-offset: 2px; touch-action: pan-y; }
 .grafico-grade { stroke: var(--cor-borda); stroke-width: 1; }
 .grafico-eixo { fill: var(--cor-texto-suave); font-size: 11px; font-variant-numeric: tabular-nums; }
 .grafico-linha { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
