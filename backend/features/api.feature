@@ -27,3 +27,16 @@ Funcionalidade: API
     Quando eu consulto "/integracao/v1/execucoes?desde=2000-01-01"
     Então a resposta é 200
     E cada item tem "movimentacao_externa_id" e "status"
+
+  Cenário: Piquete com gado não pode ser desativado
+    Quando eu desativo o "Piquete Abóbora"
+    Então a resposta é 409
+
+  Cenário: Piquete livre é desativado
+    Quando eu desativo o "Piquete Feijão"
+    Então a resposta é 204
+
+  Cenário: Forma do piquete editada recalcula a área
+    Quando eu troco a forma do "Piquete Feijão" por um quadrado de 100 m
+    Então a resposta é 200
+    E a área do piquete é de 1 hectare

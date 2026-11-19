@@ -19,6 +19,7 @@ export interface Piquete {
   geometria: GeoJsonPolygon;
   area_ha: number;
   vegetacao: string; // espécie ou tipo de capim
+  externo_id?: string | null; // id do mesmo piquete no SeuGado (vem da API)
 }
 
 export interface Rebanho {
@@ -69,6 +70,12 @@ export interface Movimentacao {
   status: StatusMovimentacao;
   destino_trocado: boolean; // foi escolhido outro piquete no lugar do recomendado
   destino_recomendado_nome: string;
+  // campos que vêm da API (SPEC-001); no modo demonstração ficam vazios
+  explicacao?: string;
+  explicacao_origem?: "regra" | "llm";
+  coleiras?: string[];
+  origem_plano?: "maneja" | "seugado";
+  externo_id?: string | null;
 }
 
 export type TipoAlerta =

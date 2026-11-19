@@ -64,3 +64,20 @@ def cada_item(ctx, campo1, campo2):
     itens = ctx["resposta"].json()
     assert itens, "lista vazia"
     assert all(campo1 in i and campo2 in i for i in itens)
+
+
+@when(parsers.parse('eu desativo o "{nome}"'))
+def desativo(ctx, nome):
+    ctx["resposta"] = cliente(ctx).delete(f"/piquetes/{piquete_id(ctx, nome)}")
+
+
+@when(parsers.parse('eu troco a forma do "{nome}" por um quadrado de {lado:d} m'))
+def troco_forma(ctx, nome, lado):
+    from maneja.geo import poligono_em_metros
+    geometria = poligono_em_metros((-9.6205, -35.9695), [(0, 0), (lado, 0), (lado, lado), (0, lado)])
+    ctx["resposta"] = cliente(ctx).put(f"/piquetes/{piquete_id(ctx, nome)}", json={"geometria": geometria})
+
+
+@then(parsers.parse("a área do piquete é de {ha:d} hectare"))
+def area_do_piquete(ctx, ha):
+    assert abs(ctx["resposta"].json()["area_ha"] - ha) < 0.01

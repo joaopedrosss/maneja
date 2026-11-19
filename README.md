@@ -35,7 +35,7 @@ MANEJA_SEUGADO_MODO=arquivo uv run uvicorn maneja.api:app --reload   # com o pla
 
 ## Front-end
 
-O front ainda roda com dados mockados no navegador. A SPEC-010 liga a API.
+Com `VITE_API_URL` definida (copie `.env.example` para `.env.local`), o front usa a API. Sem ela, roda no modo demonstração, com dados em memória.
 
 ### Como rodar o front
 

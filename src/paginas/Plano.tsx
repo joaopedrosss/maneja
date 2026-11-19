@@ -40,11 +40,17 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
     .filter((r) => validarMovimento(r.piquete_id, lotacaoDe(estado.lotacao, mov.piquete_origem_id) ?? mov.rebanho, dados).length === 0)
     .sort((a, b) => b.ndvi! - a.ndvi!);
 
-  function confirmar(destinoId?: string): void {
+  async function confirmar(destinoId?: string): Promise<void> {
     setErro(null);
-    const falha = executarMovimentacao(mov.id, destinoId);
+    const falha = await executarMovimentacao(mov.id, destinoId);
     if (falha) setErro(falha);
     else setEscolhendo(false);
+  }
+
+  async function recusar(): Promise<void> {
+    setErro(null);
+    const falha = await recusarMovimentacao(mov.id);
+    if (falha) setErro(falha);
   }
 
   const realizada = mov.status === "aceita" || mov.status === "trocada";
@@ -61,6 +67,11 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
       </div>
       <p className="cartao-subtitulo">{descreverRebanho(mov.rebanho)}</p>
       <p>{mov.motivo}</p>
+      {mov.explicacao_origem === "llm" && mov.explicacao ? (
+        <p className="aviso-info">
+          <span className="selo selo-alta">IA</span> {mov.explicacao}
+        </p>
+      ) : null}
       <p className="plano-previsao">
         NDVI: {decimal(mov.ndvi_origem, 2)} → {decimal(mov.ndvi_destino, 2)}
       </p>
@@ -90,7 +101,7 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
           </label>
           {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete apto a receber este rebanho.</p> : null}
           <div className="formulario-acoes">
-            <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => confirmar(destino)}>
+            <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => void confirmar(destino)}>
               Confirmar com este piquete
             </button>
             <button className="botao botao-secundario" onClick={() => { setEscolhendo(false); setErro(null); }}>
@@ -100,13 +111,13 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
         </div>
       ) : (
         <div className="formulario-acoes plano-acoes">
-          <button className="botao botao-primario" disabled={bloqueado} onClick={() => confirmar()}>
+          <button className="botao botao-primario" disabled={bloqueado} onClick={() => void confirmar()}>
             Confirmar movimentação
           </button>
           <button className="botao botao-secundario" disabled={bloqueado} onClick={() => setEscolhendo(true)}>
             Escolher outro piquete
           </button>
-          <button className="botao botao-secundario" disabled={bloqueado} onClick={() => recusarMovimentacao(mov.id)}>
+          <button className="botao botao-secundario" disabled={bloqueado} onClick={() => void recusar()}>
             Recusar
           </button>
         </div>

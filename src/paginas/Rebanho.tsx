@@ -16,10 +16,11 @@ function CartaoLotacao({ piquete, inicial, desde }: { piquete: Piquete; inicial:
   const [valores, setValores] = useState(inicial);
   const [salvo, setSalvo] = useState(false);
 
-  function salvar(evento: FormEvent<HTMLFormElement>): void {
+  async function salvar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault();
-    salvarLotacao(piquete.id, valores);
-    setSalvo(true);
+    const falha = await salvarLotacao(piquete.id, valores);
+    if (falha) window.alert(`Não foi possível salvar: ${falha}`);
+    else setSalvo(true);
   }
 
   function mudar(chave: keyof DadosRebanho, texto: string): void {

@@ -83,6 +83,41 @@ class Sistema:
         self.simulador.atualizar_piquetes(self.repo.piquetes)
         return piquete
 
+    def atualizar_fazenda(self, nome: str):
+        if not nome.strip():
+            raise RegraViolada(["o nome da fazenda é obrigatório"])
+        self.repo.fazenda.nome = nome.strip()
+        return self.repo.fazenda
+
+    def atualizar_piquete(self, piquete_id: str, nome: str | None = None, vegetacao: str | None = None,
+                          geometria: dict | None = None) -> Piquete:
+        piquete = next((p for p in self.repo.piquetes if p.id == piquete_id), None)
+        if piquete is None:
+            raise KeyError(piquete_id)
+        if nome is not None:
+            if not nome.strip():
+                raise RegraViolada(["o nome do piquete é obrigatório"])
+            piquete.nome = nome.strip()
+        if vegetacao is not None:
+            piquete.vegetacao = vegetacao.strip()
+        if geometria is not None:
+            if not poligono_valido(geometria):
+                raise RegraViolada(["o polígono precisa de pelo menos 3 pontos distintos e área maior que zero"])
+            piquete.geometria, piquete.area_ha = geometria, area_ha(geometria)
+            self.simulador.atualizar_piquetes(self.repo.piquetes)
+        return piquete
+
+    def remover_piquete(self, piquete_id: str) -> None:
+        if not any(p.id == piquete_id for p in self.repo.piquetes):
+            raise KeyError(piquete_id)
+        if lotacao_de(self.repo.lotacao, piquete_id) or any(
+                c.piquete_cadastro_id == piquete_id for c in self.repo.coleiras):
+            raise Conflito("Há gado neste piquete. Mova os animais antes de desativar.")
+        self.repo.piquetes = [p for p in self.repo.piquetes if p.id != piquete_id]
+        self.repo.ndvi = [l for l in self.repo.ndvi if l.piquete_id != piquete_id]
+        self.repo.lotacao = [l for l in self.repo.lotacao if l.piquete_id != piquete_id]
+        self.simulador.atualizar_piquetes(self.repo.piquetes)
+
     def atualizar_lotacao(self, piquete_id: str, bois: int, vacas: int, bezerros: int) -> Lotacao:
         if not any(p.id == piquete_id for p in self.repo.piquetes):
             raise KeyError(piquete_id)

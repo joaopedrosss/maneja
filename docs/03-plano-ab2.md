@@ -25,8 +25,8 @@ Papéis da Gestão de RH: GER Jackson · FRN João Pedro · BCK Kauê · MID Mar
 | SPEC-006 | Clima real (Open-Meteo) com fallback | Support | 6 | Leo Lima | Maria Antônia | 21/11 | a fazer |
 | SPEC-007 | NDVI real (Sentinel-2) com fallback simulado | Support | 5 | Maria Antônia | Leo Lima | 23/11 | a fazer · opcional |
 | SPEC-008 | Persistência PostgreSQL | Generic | 2, 9 | Kauê | José Felix | 22/11 | a fazer |
-| SPEC-009 | Autenticação (login e token) | Generic | 3 | Kauê (API) e João Pedro (tela) | Júlia | 22/11 | a fazer |
-| SPEC-010 | Front ligado à API, mantendo o modo demonstração | Generic | 3, 8 | João Pedro | Kauê | 22/11 | a fazer |
+| SPEC-009 | Autenticação (login e token) | Generic | 3 | Kauê | Júlia | 22/11 | a fazer |
+| SPEC-010 | Front ligado à API, mantendo o modo demonstração | Generic | 3, 8 | Kauê | João Pedro | 22/11 | ✅ feita |
 | SPEC-011 | Telas de coleiras e planejado × realizado | Support | 5, 8 | João Pedro e Maria Antônia | Leandro | 23/11 | a fazer |
 | SPEC-012 | Integração SeuGado em modo `api` | Integração | 9 | José Felix | Kauê | 23/11 | a fazer |
 | SPEC-013 | Deploy no Render (`render.yaml`) | Integração | 9 | José Felix | Jackson | 23/11 | a fazer |

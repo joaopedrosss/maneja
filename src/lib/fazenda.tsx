@@ -1,5 +1,7 @@
-// Estado da aplicação de demonstração (substitui a API e o banco).
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+// Estado da aplicação. Com VITE_API_URL definida, tudo vem da API (backend/);
+// sem ela, roda o modo demonstração em memória (decisão D7, SPEC-010).
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { api, carregarBase, mensagemDeErro, USAR_API, API_URL } from "./api";
 import { gerarRecomendacao } from "./agente";
 import { hojeNaFazenda } from "./datas";
 import { baseInicial, USUARIO, type Base } from "./demo";
@@ -21,19 +23,21 @@ export interface NovoPiquete {
   geometria: GeoJsonPolygon;
 }
 
+// As ações devolvem uma mensagem de erro (ou null) quando podem ser recusadas.
 interface Contexto {
+  modo: "api" | "demo";
   usuario: typeof USUARIO;
   estado: EstadoDemo;
   fazenda: Fazenda;
   hoje: string;
-  salvarFazenda: (dados: DadosFazenda) => void;
-  criarPiquete: (dados: NovoPiquete) => string;
-  atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => void;
-  desativarPiquete: (piqueteId: string) => string | null;
+  salvarFazenda: (dados: DadosFazenda) => Promise<string | null>;
+  criarPiquete: (dados: NovoPiquete) => Promise<string>;
+  atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => Promise<string | null>;
+  desativarPiquete: (piqueteId: string) => Promise<string | null>;
   gerarPlano: () => Promise<PlanoManejo>;
-  salvarLotacao: (piqueteId: string, rebanho: Rebanho) => void;
-  executarMovimentacao: (movimentacaoId: string, destinoId?: string) => string | null;
-  recusarMovimentacao: (movimentacaoId: string) => void;
+  salvarLotacao: (piqueteId: string, rebanho: Rebanho) => Promise<string | null>;
+  executarMovimentacao: (movimentacaoId: string, destinoId?: string) => Promise<string | null>;
+  recusarMovimentacao: (movimentacaoId: string) => Promise<string | null>;
 }
 
 const ContextoFazenda = createContext<Contexto | null>(null);
@@ -59,7 +63,7 @@ function estadoInicial(): EstadoDemo {
   return { ...base, plano: recomendar(base, hoje, geradoAs) };
 }
 
-export function FazendaProvider({ children }: { children: ReactNode }) {
+function ProviderDemo({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoDemo>(estadoInicial);
   // cópia síncrona do estado: `alterar` é o único caminho de escrita e a mantém em dia
   const atual = useRef(estado);
@@ -73,11 +77,12 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     setEstado(atual.current);
   }
 
-  function salvarFazenda(dados: DadosFazenda): void {
+  async function salvarFazenda(dados: DadosFazenda): Promise<string | null> {
     alterar((e) => ({ ...e, fazenda: { ...e.fazenda, ...dados } }));
+    return null;
   }
 
-  function criarPiquete(dados: NovoPiquete): string {
+  async function criarPiquete(dados: NovoPiquete): Promise<string> {
     const id = `pq-${Date.now().toString(36)}`;
     alterar((e) => ({
       ...e,
@@ -96,16 +101,17 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     return id;
   }
 
-  function atualizarGeometria(piqueteId: string, geometria: GeoJsonPolygon): void {
+  async function atualizarGeometria(piqueteId: string, geometria: GeoJsonPolygon): Promise<string | null> {
     alterar((e) => ({
       ...e,
       piquetes: e.piquetes.map((p) =>
         p.id === piqueteId ? { ...p, geometria, area_ha: areaHa(geometria) } : p,
       ),
     }));
+    return null;
   }
 
-  function desativarPiquete(piqueteId: string): string | null {
+  async function desativarPiquete(piqueteId: string): Promise<string | null> {
     if (lotacaoDe(atual.current.lotacao, piqueteId)) return "Há gado neste piquete. Mova os animais antes de desativar.";
     alterar((e) => ({
       ...e,
@@ -116,13 +122,14 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  function salvarLotacao(piqueteId: string, rebanho: Rebanho): void {
+  async function salvarLotacao(piqueteId: string, rebanho: Rebanho): Promise<string | null> {
     alterar((e) => {
       const outras = e.lotacao.filter((l) => l.piquete_id !== piqueteId);
       if (totalAnimais(rebanho) === 0) return { ...e, lotacao: outras };
       const desde = lotacaoDe(e.lotacao, piqueteId)?.desde ?? hoje;
       return { ...e, lotacao: [...outras, { piquete_id: piqueteId, fazenda_id: fazendaId, ...rebanho, desde }] };
     });
+    return null;
   }
 
   async function gerarPlano(): Promise<PlanoManejo> {
@@ -134,7 +141,7 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
 
   // Aceitar a recomendação (ou escolher outro destino) registra a movimentação:
   // o rebanho passa a ocupar o destino a partir de hoje e o mapa se atualiza.
-  function executarMovimentacao(movimentacaoId: string, destinoId?: string): string | null {
+  async function executarMovimentacao(movimentacaoId: string, destinoId?: string): Promise<string | null> {
     const e = atual.current;
     const plano = e.plano;
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
@@ -167,21 +174,23 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
     return null;
   }
 
-  function recusarMovimentacao(movimentacaoId: string): void {
+  async function recusarMovimentacao(movimentacaoId: string): Promise<string | null> {
     const plano = atual.current.plano;
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
-    if (!plano || !mov) return;
+    if (!plano || !mov) return "Movimentação não encontrada.";
     const recusada: Movimentacao = { ...mov, status: "recusada" };
     alterar((s) => ({
       ...s,
       historico: [{ ...recusada, data: hoje }, ...s.historico],
       plano: comMovimentacao(plano, recusada),
     }));
+    return null;
   }
 
   return (
     <ContextoFazenda.Provider
       value={{
+        modo: "demo",
         usuario: USUARIO,
         estado,
         fazenda,
@@ -199,6 +208,75 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
       {children}
     </ContextoFazenda.Provider>
   );
+}
+
+// ---------- modo API ----------
+
+function ProviderApi({ children }: { children: ReactNode }) {
+  const [estado, setEstado] = useState<EstadoDemo | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const recarregar = useCallback(async (): Promise<EstadoDemo> => {
+    const base = await carregarBase();
+    setEstado(base);
+    setErro(null);
+    return base;
+  }, []);
+
+  useEffect(() => {
+    recarregar().catch((e: unknown) => setErro(mensagemDeErro(e)));
+  }, [recarregar]);
+
+  if (erro !== null && estado === null) {
+    return (
+      <div className="aviso-alerta" role="alert" style={{ margin: 24 }}>
+        Não foi possível carregar os dados: {erro}. Confira se o backend está rodando em {API_URL}
+        {" "}(<code>cd backend && uv run uvicorn maneja.api:app --reload</code>).
+      </div>
+    );
+  }
+  if (estado === null) return <p style={{ margin: 24 }}>Carregando dados da fazenda…</p>;
+
+  // executa a ação na API e recarrega tudo; devolve a mensagem de erro, se houver
+  async function acao(fazer: () => Promise<unknown>): Promise<string | null> {
+    try {
+      await fazer();
+      await recarregar();
+      return null;
+    } catch (e) {
+      return mensagemDeErro(e);
+    }
+  }
+
+  const fazenda = estado.fazenda;
+  const valor: Contexto = {
+    modo: "api",
+    usuario: USUARIO,
+    estado,
+    fazenda,
+    hoje: hojeNaFazenda(fazenda.timezone),
+    salvarFazenda: (dados) => acao(() => api.salvarFazenda(dados.nome)),
+    criarPiquete: async (dados) => {
+      const piquete = await api.criarPiquete(dados.nome.trim(), dados.vegetacao.trim(), dados.geometria);
+      await recarregar();
+      return piquete.id;
+    },
+    atualizarGeometria: (id, geometria) => acao(() => api.atualizarGeometria(id, geometria)),
+    desativarPiquete: (id) => acao(() => api.removerPiquete(id)),
+    gerarPlano: async () => {
+      const plano = await api.gerarPlano();
+      await recarregar();
+      return plano;
+    },
+    salvarLotacao: (id, rebanho) => acao(() => api.salvarLotacao(id, rebanho)),
+    executarMovimentacao: (id, destinoId) => acao(() => api.aceitar(id, destinoId)),
+    recusarMovimentacao: (id) => acao(() => api.recusar(id)),
+  };
+  return <ContextoFazenda.Provider value={valor}>{children}</ContextoFazenda.Provider>;
+}
+
+export function FazendaProvider({ children }: { children: ReactNode }) {
+  return USAR_API ? <ProviderApi>{children}</ProviderApi> : <ProviderDemo>{children}</ProviderDemo>;
 }
 
 export function useFazenda(): Contexto {

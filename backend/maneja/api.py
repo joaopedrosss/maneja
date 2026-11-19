@@ -24,6 +24,16 @@ class PiqueteIn(BaseModel):
     externo_id: str | None = None
 
 
+class FazendaIn(BaseModel):
+    nome: str
+
+
+class PiqueteEdicaoIn(BaseModel):
+    nome: str | None = None
+    vegetacao: str | None = None
+    geometria: dict | None = None
+
+
 class LotacaoIn(BaseModel):
     bois: Quantidade = 0
     vacas: Quantidade = 0
@@ -51,7 +61,7 @@ class PosicaoIn(BaseModel):
 
 def criar_app(sistema: Sistema | None = None) -> FastAPI:
     app = FastAPI(title="Maneja", version="0.1.0")
-    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["*"], allow_headers=["*"])
     app.state.sistema = sistema or montar_sistema(Config.do_ambiente())
 
     def s() -> Sistema:
@@ -77,6 +87,10 @@ def criar_app(sistema: Sistema | None = None) -> FastAPI:
     def fazenda():
         return jsonable_encoder(s().repo.fazenda)
 
+    @app.put("/fazenda")
+    def atualizar_fazenda(corpo: FazendaIn):
+        return executar(lambda: s().atualizar_fazenda(corpo.nome))
+
     @app.get("/piquetes")
     def piquetes():
         return jsonable_encoder(s().repo.piquetes)
@@ -84,6 +98,14 @@ def criar_app(sistema: Sistema | None = None) -> FastAPI:
     @app.post("/piquetes", status_code=201)
     def criar_piquete(corpo: PiqueteIn):
         return executar(lambda: s().criar_piquete(corpo.nome, corpo.vegetacao, corpo.geometria, corpo.externo_id))
+
+    @app.put("/piquetes/{piquete_id}")
+    def atualizar_piquete(piquete_id: str, corpo: PiqueteEdicaoIn):
+        return executar(lambda: s().atualizar_piquete(piquete_id, corpo.nome, corpo.vegetacao, corpo.geometria))
+
+    @app.delete("/piquetes/{piquete_id}", status_code=204)
+    def remover_piquete(piquete_id: str):
+        executar(lambda: s().remover_piquete(piquete_id))
 
     @app.get("/lotacao")
     def lotacao():

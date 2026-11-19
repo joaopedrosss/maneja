@@ -132,13 +132,18 @@ export default function Mapa() {
     setNovaGeometria(geometria);
   }, []);
 
-  function salvarNovo(evento: FormEvent<HTMLFormElement>): void {
+  async function salvarNovo(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault();
     if (!novaGeometria) return;
-    const id = criarPiquete({ nome, vegetacao, geometria: novaGeometria });
-    setNovaGeometria(null);
-    setVegetacao("");
-    setSelecionadoId(id);
+    setErro(null);
+    try {
+      const id = await criarPiquete({ nome, vegetacao, geometria: novaGeometria });
+      setNovaGeometria(null);
+      setVegetacao("");
+      setSelecionadoId(id);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível salvar o piquete.");
+    }
   }
 
   function editarForma(id: string): void {
@@ -146,12 +151,13 @@ export default function Mapa() {
     camadas.current.get(id)?.pm.enable({ allowSelfIntersection: false });
   }
 
-  function salvarForma(id: string): void {
+  async function salvarForma(id: string): Promise<void> {
     const camada = camadas.current.get(id);
     if (!camada) return;
     camada.pm.disable();
     setEditandoId(null);
-    atualizarGeometria(id, camada.toGeoJSON().geometry as GeoJsonPolygon);
+    const falha = await atualizarGeometria(id, camada.toGeoJSON().geometry as GeoJsonPolygon);
+    if (falha) setErro(falha);
   }
 
   function cancelarForma(p: Piquete): void {
@@ -163,9 +169,9 @@ export default function Mapa() {
     setEditandoId(null);
   }
 
-  function desativar(id: string): void {
+  async function desativar(id: string): Promise<void> {
     setErro(null);
-    const falha = desativarPiquete(id);
+    const falha = await desativarPiquete(id);
     setConfirmarDesativarId(null);
     if (falha) setErro(falha);
     else if (selecionadoId === id) setSelecionadoId(null);
