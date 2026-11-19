@@ -24,8 +24,8 @@
 
 .painel-lateral {
   flex: 1;
+  min-height: 0;
   background: var(--cor-fundo);
-  border-left: 1px solid var(--cor-borda);
   border-top: 1px solid var(--cor-borda);
   padding: 16px;
   overflow-y: auto;
@@ -34,6 +34,7 @@
 @media (min-width: 768px) {
   .painel-lateral {
     flex: 0 0 30%;
+    border-left: 1px solid var(--cor-borda);
     border-top: none;
   }
 }
@@ -42,9 +43,9 @@
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
-  box-shadow: var(--sombra);
+  box-shadow: none;
   color: var(--cor-texto);
-  font-weight: bold;
+  font-weight: 700;
   pointer-events: auto !important;
   text-align: center;
 }
@@ -78,22 +79,30 @@
 
 .formulario-piquete input,
 .formulario-piquete select {
-  padding: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
   margin-top: 4px;
   font-family: inherit;
+  font-size: 0.95rem;
 }
 
 .botao-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
   background: var(--cor-primaria);
   color: var(--cor-superficie);
-  border: none;
-  padding: 8px 12px;
+  border: 1px solid transparent;
+  padding: 8px 14px;
   border-radius: var(--raio-pequeno);
   cursor: pointer;
   font-family: inherit;
-  font-weight: bold;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .botao-acao:hover {
@@ -101,22 +110,25 @@
 }
 
 .botao-acao.secundario {
-  background: var(--cor-borda);
+  background: var(--cor-superficie);
   color: var(--cor-texto);
+  border-color: var(--cor-borda);
 }
 
 .botao-acao.secundario:hover {
-  background: var(--cor-texto-suave);
-  color: var(--cor-superficie);
+  background: var(--cor-superficie);
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
 }
 
 .botao-acao.perigo {
   background: var(--cor-erro);
+  color: var(--cor-superficie);
 }
 
 .botao-acao.perigo:hover {
   background: var(--cor-erro);
-  filter: brightness(0.8);
+  filter: brightness(0.9);
 }
 
 .mensagem-erro {
@@ -157,7 +169,7 @@
 .item-piquete {
   border: 1px solid var(--cor-borda);
   padding: 12px;
-  border-radius: var(--raio-pequeno);
+  border-radius: var(--raio);
   background: var(--cor-superficie);
   cursor: pointer;
 }
@@ -168,7 +180,7 @@
 
 .item-piquete.ativo {
   border-color: var(--cor-primaria);
-  box-shadow: 0 0 0 1px var(--cor-primaria);
+  background: var(--cor-superficie-2);
 }
 
 .item-piquete h3 {
@@ -243,24 +255,61 @@
   right: 10px;
   z-index: 1000;
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100% - 56px);
 }
 
 .controles-topo input {
-  padding: 4px 8px;
+  padding: 6px 8px;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
   width: 150px;
   font-family: inherit;
+  font-size: 0.85rem;
 }
 
 .controles-topo button {
-  padding: 4px 8px;
+  padding: 6px 10px;
   background: var(--cor-superficie);
+  color: var(--cor-texto);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
   cursor: pointer;
   font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.controles-topo button:hover {
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+}
+
+@media (max-width: 640px) {
+  .mapa-wrapper {
+    flex: 0 0 55%;
+    height: auto;
+  }
+
+  .controles-topo input {
+    width: 112px;
+    font-size: 0.8rem;
+  }
+
+  .controles-topo button {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+  }
+
+  .legenda-mapa {
+    bottom: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+  }
 }
 .mapa-cinza { filter: grayscale(1); }
 .mapa-wrapper { position: relative; }

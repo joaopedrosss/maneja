@@ -11,7 +11,7 @@
 .plano-movimento p { margin: 10px 0 0; }
 .plano-previsao { font-weight: 500; }
 .plano-alertas { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.plano-alerta { display: flex; align-items: flex-start; gap: 12px; margin: 0; border: 1px solid var(--cor-alerta-suave); }
+.plano-alerta { display: flex; align-items: flex-start; gap: 12px; margin: 0; border: 1px solid var(--cor-borda); border-left: 4px solid var(--cor-destaque); }
 .plano-alerta p { margin: 4px 0; }
 .plano-alerta-icone { font-size: 1.4rem; min-width: 24px; text-align: center; }
 .plano-vazio { padding-block: 40px; text-align: center; }

@@ -99,6 +99,13 @@ h3 {
   padding: 20px 24px;
 }
 
+@media (max-width: 640px) {
+  .cartao,
+  .cartao-escuro {
+    padding: 16px;
+  }
+}
+
 .cartao-escuro {
   background: var(--cor-cartao-escuro);
   color: var(--cor-cartao-escuro-texto);

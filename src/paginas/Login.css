@@ -3,7 +3,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: var(--cor-fundo, #f4f6f5);
+  background: var(--cor-fundo);
 }
 
 .login-cartao {
@@ -17,6 +17,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  color: var(--cor-primaria);
   font-size: 1.3rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }

@@ -9,7 +9,7 @@
 .grafico-linha { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .grafico-mira { stroke: var(--cor-texto-suave); stroke-width: 1; }
 .grafico-ponto { stroke: var(--cor-superficie); stroke-width: 2; }
-.grafico-dica { position: absolute; top: 12px; z-index: 1; min-width: 170px; padding: 8px 10px; background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); box-shadow: var(--sombra); font-size: .8rem; pointer-events: none; }
+.grafico-dica { position: absolute; top: 12px; z-index: 1; min-width: 170px; padding: 8px 10px; background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); font-size: .8rem; pointer-events: none; }
 .grafico-dica-linha { display: flex; align-items: center; gap: 6px; }
 .grafico-dica-linha b { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; }
 .grafico-tabela summary { color: var(--cor-texto-suave); font-size: .85rem; cursor: pointer; }
