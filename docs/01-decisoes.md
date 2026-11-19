@@ -12,3 +12,5 @@ Uma linha por decisão. Para mudar uma, acrescente outra que a substitua; não a
 | D6 | 19/11 | Armazenamento em memória até a SPEC-008 (PostgreSQL) | Permite ter API e testes hoje; o repositório já é uma interface |
 | D7 | 19/11 | O front continua funcionando sem backend (modo demonstração) até a SPEC-010 ligar a API | A apresentação não pode depender do deploy |
 | D8 | 19/11 | BDD com `pytest-bdd`: cada spec traz cenários que viram `.feature` | Exigência da AB2 (SDD + BDD) |
+| D9 | 19/11 | PostgreSQL por "estado em memória + gravação transacional do todo" (substitui a D6) | Mantém a interface do repositório e cabe no prazo; o volume da demonstração é pequeno |
+| D10 | 19/11 | O `main` do fork `kaeffea/maneja` é o branch de integração; o PR #1 leva tudo ao repositório do João | O Kauê não tem permissão de escrita no repositório original |

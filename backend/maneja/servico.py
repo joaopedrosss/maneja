@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -30,6 +31,16 @@ from .repositorio import RepositorioMemoria
 from .verificacao import coleiras_do_grupo, movimentacoes_externas, verificar
 
 
+def persiste(metodo):
+    """Depois de uma operação que muda dados, grava o estado (se o repositório for persistente)."""
+    @functools.wraps(metodo)
+    def envolto(self, *args, **kwargs):
+        resultado = metodo(self, *args, **kwargs)
+        self.persistir()
+        return resultado
+    return envolto
+
+
 class Conflito(Exception):
     """A operação não vale para o estado atual (por exemplo, aceitar o que já foi aceito)."""
 
@@ -56,6 +67,14 @@ class Sistema:
         self.llm = llm
         self.seugado = seugado or SeuGadoDesligado()
 
+    def persistir(self) -> None:
+        salvar = getattr(self.repo, "salvar", None)
+        if salvar is None:  # repositório em memória
+            return
+        self.repo.fisico = dict(self.simulador.fisico)
+        self.repo.deslocamento_s = self.relogio.deslocamento.total_seconds()
+        salvar()
+
     # ---------- tempo ----------
     def agora(self) -> datetime:
         return self.relogio.agora()
@@ -72,6 +91,7 @@ class Sistema:
         return resumo_piquetes(self.repo.piquetes, self.repo.ndvi, self.repo.lotacao, self.hoje())
 
     # ---------- cadastros ----------
+    @persiste
     def criar_piquete(self, nome: str, vegetacao: str, geometria: dict, externo_id: str | None = None) -> Piquete:
         if not nome.strip():
             raise RegraViolada(["o nome do piquete é obrigatório"])
@@ -83,12 +103,14 @@ class Sistema:
         self.simulador.atualizar_piquetes(self.repo.piquetes)
         return piquete
 
+    @persiste
     def atualizar_fazenda(self, nome: str):
         if not nome.strip():
             raise RegraViolada(["o nome da fazenda é obrigatório"])
         self.repo.fazenda.nome = nome.strip()
         return self.repo.fazenda
 
+    @persiste
     def atualizar_piquete(self, piquete_id: str, nome: str | None = None, vegetacao: str | None = None,
                           geometria: dict | None = None) -> Piquete:
         piquete = next((p for p in self.repo.piquetes if p.id == piquete_id), None)
@@ -107,6 +129,7 @@ class Sistema:
             self.simulador.atualizar_piquetes(self.repo.piquetes)
         return piquete
 
+    @persiste
     def remover_piquete(self, piquete_id: str) -> None:
         if not any(p.id == piquete_id for p in self.repo.piquetes):
             raise KeyError(piquete_id)
@@ -118,6 +141,7 @@ class Sistema:
         self.repo.lotacao = [l for l in self.repo.lotacao if l.piquete_id != piquete_id]
         self.simulador.atualizar_piquetes(self.repo.piquetes)
 
+    @persiste
     def atualizar_lotacao(self, piquete_id: str, bois: int, vacas: int, bezerros: int) -> Lotacao:
         if not any(p.id == piquete_id for p in self.repo.piquetes):
             raise KeyError(piquete_id)
@@ -135,6 +159,7 @@ class Sistema:
         return atual
 
     # ---------- agente ----------
+    @persiste
     def gerar_plano(self) -> PlanoManejo:
         entrada = agente_mod.EntradaAgente(self.repo.piquetes, self.repo.ndvi, self.previsao(),
                                            self.repo.lotacao, self.repo.historico)
@@ -150,6 +175,7 @@ class Sistema:
             raise Conflito(f"a movimentação já está {mov.status}")
         return mov
 
+    @persiste
     def aceitar(self, mov_id: str, destino_id: str | None = None) -> Movimentacao:
         mov = self._pendente(mov_id)
         hoje = self.hoje()
@@ -187,6 +213,7 @@ class Sistema:
         self.repo.historico.insert(0, mov)
         return mov
 
+    @persiste
     def recusar(self, mov_id: str) -> Movimentacao:
         mov = self._pendente(mov_id)
         mov.status = "recusada"
@@ -194,6 +221,7 @@ class Sistema:
         return mov
 
     # ---------- coleiras ----------
+    @persiste
     def registrar_posicoes(self, posicoes: list[Posicao]) -> int:
         validar_posicoes(posicoes, self.repo.coleiras)
         self.repo.posicoes.extend(posicoes)
@@ -226,8 +254,11 @@ class Sistema:
         except Exception:  # noqa: BLE001 - o SeuGado nunca derruba o Maneja
             plano, avisos = None, ["plano_externo_indisponivel"]
         if plano:
+            antes = len(self.repo.grupos_externos)
             planejadas += movimentacoes_externas(plano, self.repo.piquetes, self.repo.coleiras,
                                                  self.repo.posicoes, agora, self.repo.grupos_externos)
+            if len(self.repo.grupos_externos) != antes:
+                self.persistir()
         return [verificar(m, self.repo.piquetes, self.repo.posicoes, agora, hoje) for m in planejadas], avisos
 
     def execucoes(self, desde: str) -> list[dict]:

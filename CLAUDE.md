@@ -46,7 +46,8 @@ backend/
     monitoramento.py NDVI e ocupação estimada pelas coleiras
     verificacao.py   planejado × realizado
     adaptadores/     tudo que fala com fora: satélite, clima, LLM, coleiras, SeuGado
-    repositorio.py   armazenamento (memória hoje; PostgreSQL na SPEC-008)
+    repositorio.py   armazenamento em memória
+    repositorio_pg.py PostgreSQL (com DATABASE_URL; SPEC-008)
     api.py           FastAPI
   features/          cenários BDD (.feature)
   tests/             testes (pytest + pytest-bdd)

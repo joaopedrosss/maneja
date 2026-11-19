@@ -44,6 +44,8 @@ class Config:
     seugado_fazenda_id: str = ""
     perda_sinal: float = PERDA_SINAL_PADRAO
     semente: int | None = None
+    database_url: str = ""  # vazio = memória (SPEC-008)
+    semear: bool = True  # banco vazio recebe a fazenda de demonstração
 
     @classmethod
     def do_ambiente(cls) -> Config:
@@ -58,6 +60,8 @@ class Config:
             seugado_fazenda_id=e.get("MANEJA_SEUGADO_FAZENDA_ID", ""),
             perda_sinal=float(e.get("MANEJA_PERDA_SINAL", PERDA_SINAL_PADRAO)),
             semente=int(semente) if semente else None,
+            database_url=e.get("DATABASE_URL", ""),
+            semear=e.get("MANEJA_SEMEAR", "1") == "1",
         )
 
 
@@ -74,8 +78,18 @@ def montar_sistema(config: Config | None = None, inicio: datetime | None = None,
     config = config or Config()
     relogio = Relogio(inicio)
     hoje = hoje_na_fazenda(relogio.agora() if inicio else datetime.now(timezone.utc), "America/Maceio")
-    repo = repositorio_demo(hoje)
+    if config.database_url:
+        from datetime import timedelta
+
+        from .repositorio_pg import RepositorioPg
+
+        repo = RepositorioPg.abrir(config.database_url, repositorio_demo(hoje) if config.semear else None)
+        relogio.deslocamento = timedelta(seconds=repo.deslocamento_s)
+    else:
+        repo = repositorio_demo(hoje)
     simulador = SimuladorColeiras(repo.coleiras, repo.piquetes, config.perda_sinal, config.semente)
+    if getattr(repo, "fisico", None):
+        simulador.fisico.update(repo.fisico)
     sistema = Sistema(repo, clima or ClimaSimulado(), simulador, relogio, llm, adaptador_seugado(config))
     sistema.gerar_posicoes()
     sistema.verificacoes()  # com a integração ligada, registra quem está na origem de cada movimentação do SeuGado
