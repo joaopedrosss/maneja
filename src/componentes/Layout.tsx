@@ -13,7 +13,7 @@ const LINKS: { para: string; texto: string; icone: NomeIcone }[] = [
 ];
 
 export default function Layout() {
-  const { usuario, fazenda } = useFazenda();
+  const { usuario, fazenda, sair } = useFazenda();
   const localizacao = useLocation();
 
   return (
@@ -45,6 +45,11 @@ export default function Layout() {
               <span className="menu-usuario-fazenda">{fazenda.nome}</span>
             </span>
           </div>
+          {sair ? (
+            <button className="menu-sair" type="button" onClick={sair}>
+              Sair
+            </button>
+          ) : null}
         </div>
       </aside>
       <main className={localizacao.pathname === "/mapa" ? "conteudo conteudo-cheio" : "conteudo"}>

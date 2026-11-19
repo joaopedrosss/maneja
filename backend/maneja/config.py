@@ -10,11 +10,28 @@ from pathlib import Path
 from .adaptadores.clima import ClimaSimulado
 from .adaptadores.coleiras import PERDA_SINAL_PADRAO, SimuladorColeiras
 from .adaptadores.seugado import ISeuGado, SeuGadoApi, SeuGadoArquivo, SeuGadoDesligado
+from .autenticacao import ConfigAuth, hash_senha
 from .datas import hoje_na_fazenda
 from .demo import repositorio_demo
 from .servico import Relogio, Sistema
 
 EXEMPLO_PLANO_SEUGADO = Path(__file__).resolve().parent.parent / "exemplos" / "plano-seugado.json"
+
+# Valores só para desenvolvimento e demonstração. Em produção, defina as variáveis (SPEC-013).
+EMAIL_PADRAO = "tecnico@maneja.app"
+SENHA_PADRAO = "maneja123"
+SEGREDO_PADRAO = "maneja-segredo-de-desenvolvimento"
+
+
+def auth_do_ambiente() -> ConfigAuth:
+    e = os.environ
+    senha_hash = e.get("MANEJA_USUARIO_SENHA_HASH") or hash_senha(e.get("MANEJA_USUARIO_SENHA", SENHA_PADRAO))
+    return ConfigAuth(
+        email=e.get("MANEJA_USUARIO_EMAIL", EMAIL_PADRAO),
+        senha_hash=senha_hash,
+        segredo=e.get("MANEJA_JWT_SEGREDO", SEGREDO_PADRAO),
+        token_integracao=e.get("MANEJA_TOKEN_INTEGRACAO", ""),
+    )
 
 
 @dataclass

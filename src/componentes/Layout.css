@@ -171,3 +171,19 @@
     padding: 0;
   }
 }
+
+.menu-sair {
+  margin-top: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-sair:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

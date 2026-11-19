@@ -1,7 +1,8 @@
 // Estado da aplicação. Com VITE_API_URL definida, tudo vem da API (backend/);
 // sem ela, roda o modo demonstração em memória (decisão D7, SPEC-010).
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, carregarBase, mensagemDeErro, USAR_API, API_URL } from "./api";
+import { api, carregarBase, EVENTO_SESSAO_EXPIRADA, lerToken, mensagemDeErro, sair, USAR_API, API_URL } from "./api";
+import Login from "../paginas/Login";
 import { gerarRecomendacao } from "./agente";
 import { hojeNaFazenda } from "./datas";
 import { baseInicial, USUARIO, type Base } from "./demo";
@@ -38,6 +39,7 @@ interface Contexto {
   salvarLotacao: (piqueteId: string, rebanho: Rebanho) => Promise<string | null>;
   executarMovimentacao: (movimentacaoId: string, destinoId?: string) => Promise<string | null>;
   recusarMovimentacao: (movimentacaoId: string) => Promise<string | null>;
+  sair?: () => void; // só no modo API
 }
 
 const ContextoFazenda = createContext<Contexto | null>(null);
@@ -213,6 +215,8 @@ function ProviderDemo({ children }: { children: ReactNode }) {
 // ---------- modo API ----------
 
 function ProviderApi({ children }: { children: ReactNode }) {
+  const [logado, setLogado] = useState(() => lerToken() !== null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [estado, setEstado] = useState<EstadoDemo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -223,9 +227,25 @@ function ProviderApi({ children }: { children: ReactNode }) {
     return base;
   }, []);
 
+  // 401 em qualquer chamada: volta para o login (critério de qualidade 4.2)
   useEffect(() => {
+    const expirou = () => {
+      setLogado(false);
+      setEstado(null);
+      setAviso("Sua sessão expirou. Entre de novo.");
+    };
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+    return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+  }, []);
+
+  useEffect(() => {
+    if (!logado) return;
     recarregar().catch((e: unknown) => setErro(mensagemDeErro(e)));
-  }, [recarregar]);
+  }, [logado, recarregar]);
+
+  if (!logado) {
+    return <Login aviso={aviso} aoEntrar={() => { setAviso(null); setErro(null); setLogado(true); }} />;
+  }
 
   if (erro !== null && estado === null) {
     return (
@@ -271,6 +291,11 @@ function ProviderApi({ children }: { children: ReactNode }) {
     salvarLotacao: (id, rebanho) => acao(() => api.salvarLotacao(id, rebanho)),
     executarMovimentacao: (id, destinoId) => acao(() => api.aceitar(id, destinoId)),
     recusarMovimentacao: (id) => acao(() => api.recusar(id)),
+    sair: () => {
+      sair();
+      setEstado(null);
+      setLogado(false);
+    },
   };
   return <ContextoFazenda.Provider value={valor}>{children}</ContextoFazenda.Provider>;
 }

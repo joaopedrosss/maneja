@@ -51,7 +51,7 @@ O que NÃO fazer.
 | [006](SPEC-006-clima-open-meteo.md) | Clima real (Open-Meteo) | a fazer |
 | [007](SPEC-007-ndvi-sentinel.md) | NDVI real (Sentinel-2) | a fazer · opcional |
 | [008](SPEC-008-persistencia-postgres.md) | Persistência PostgreSQL | a fazer |
-| [009](SPEC-009-autenticacao.md) | Autenticação | a fazer |
+| [009](SPEC-009-autenticacao.md) | Autenticação | feita |
 | [010](SPEC-010-front-na-api.md) | Front ligado à API | feita |
 | [011](SPEC-011-telas-coleiras-verificacao.md) | Telas de coleiras e planejado × realizado | a fazer |
 | [012](SPEC-012-seugado-modo-api.md) | Integração SeuGado em modo `api` | a fazer |

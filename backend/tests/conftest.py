@@ -7,9 +7,12 @@ from fastapi.testclient import TestClient
 from pytest_bdd import given, parsers, then
 
 from maneja.api import criar_app
+from maneja.autenticacao import ConfigAuth, hash_senha
 from maneja.config import Config, montar_sistema
 
 INICIO = datetime(2026, 11, 19, 13, 0, tzinfo=timezone.utc)  # quinta, 10h em Maceió
+EMAIL_TESTE, SENHA_TESTE = "tecnico@maneja.app", "senha-de-teste"
+AUTH_TESTE = ConfigAuth(EMAIL_TESTE, hash_senha(SENHA_TESTE, iteracoes=1_000), "segredo-de-teste", "token-do-seugado")
 
 
 @pytest.fixture
@@ -27,9 +30,21 @@ def sistema(ctx: dict):
     return ctx["sistema"]
 
 
+def cliente_anonimo(ctx: dict) -> TestClient:
+    """Cliente sem login (o relógio dos tokens pode ser trocado em ctx["agora_auth"])."""
+    if "anonimo" not in ctx:
+        relogio = lambda: ctx.get("agora_auth") or datetime.now(timezone.utc)  # noqa: E731
+        ctx["anonimo"] = TestClient(criar_app(sistema(ctx), AUTH_TESTE, relogio))
+    return ctx["anonimo"]
+
+
 def cliente(ctx: dict) -> TestClient:
+    """Cliente já autenticado: todas as rotas de dados exigem token (SPEC-009)."""
     if "cliente" not in ctx:
-        ctx["cliente"] = TestClient(criar_app(sistema(ctx)))
+        c = cliente_anonimo(ctx)
+        token = c.post("/auth/token", json={"email": EMAIL_TESTE, "senha": SENHA_TESTE}).json()["access_token"]
+        c.headers["Authorization"] = f"Bearer {token}"
+        ctx["cliente"] = c
     return ctx["cliente"]
 
 

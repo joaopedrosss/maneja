@@ -18,16 +18,50 @@ export class ErroApi extends Error {
   }
 }
 
+// ---------- sessão (SPEC-009) ----------
+// O token fica no localStorage só por conveniência: se o navegador bloquear, o login vale até recarregar.
+const CHAVE_TOKEN = "maneja.token";
+let tokenEmMemoria: string | null = null;
+
+export function lerToken(): string | null {
+  try {
+    return localStorage.getItem(CHAVE_TOKEN) ?? tokenEmMemoria;
+  } catch {
+    return tokenEmMemoria;
+  }
+}
+
+export function guardarToken(token: string | null): void {
+  tokenEmMemoria = token;
+  try {
+    if (token === null) localStorage.removeItem(CHAVE_TOKEN);
+    else localStorage.setItem(CHAVE_TOKEN, token);
+  } catch {
+    // sem armazenamento: fica só em memória
+  }
+}
+
+// Quem quiser saber que a sessão caiu (401) escuta este evento.
+export const EVENTO_SESSAO_EXPIRADA = "maneja:sessao-expirada";
+
 async function chamar<T>(metodo: string, caminho: string, corpo?: unknown): Promise<T> {
   let resposta: Response;
+  const cabecalhos: Record<string, string> = {};
+  if (corpo !== undefined) cabecalhos["Content-Type"] = "application/json";
+  const token = lerToken();
+  if (token) cabecalhos.Authorization = `Bearer ${token}`;
   try {
     resposta = await fetch(`${API_URL}${caminho}`, {
       method: metodo,
-      headers: corpo === undefined ? undefined : { "Content-Type": "application/json" },
+      headers: cabecalhos,
       body: corpo === undefined ? undefined : JSON.stringify(corpo),
     });
   } catch {
     throw new ErroApi(0, [`não foi possível falar com a API em ${API_URL}`]);
+  }
+  if (resposta.status === 401 && caminho !== "/auth/token") {
+    guardarToken(null);
+    window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
   }
   if (resposta.status === 204) return undefined as T;
   const dados = await resposta.json().catch(() => null);
@@ -59,6 +93,22 @@ export async function carregarBase(): Promise<BaseApi> {
     throw e;
   });
   return { fazenda, piquetes, lotacao, ndvi, clima, historico, plano };
+}
+
+export interface Sessao {
+  access_token: string;
+  expira_em: string;
+  email: string;
+}
+
+export async function entrar(email: string, senha: string): Promise<Sessao> {
+  const sessao = await chamar<Sessao>("POST", "/auth/token", { email, senha });
+  guardarToken(sessao.access_token);
+  return sessao;
+}
+
+export function sair(): void {
+  guardarToken(null);
 }
 
 export const api = {
