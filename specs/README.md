@@ -54,6 +54,7 @@ O que NÃO fazer.
 | [009](SPEC-009-autenticacao.md) | Autenticação | feita |
 | [010](SPEC-010-front-na-api.md) | Front ligado à API | feita |
 | [011](SPEC-011-telas-coleiras-verificacao.md) | Telas de coleiras e planejado × realizado | a fazer |
-| [012](SPEC-012-seugado-modo-api.md) | Integração SeuGado em modo `api` | a fazer |
-| [013](SPEC-013-deploy-render.md) | Deploy no Render | a fazer |
+| [012](SPEC-012-seugado-modo-api.md) | Integração SeuGado em modo `api` | a fazer (Kauê) |
+| [013](SPEC-013-deploy-vercel.md) | Deploy na Vercel + Supabase | código pronto; falta publicar |
 | [014](SPEC-014-documentacao-sdd.md) | Documentação SDD e apresentação | em andamento |
+| [015](SPEC-015-identidade-visual.md) | Identidade visual própria | a fazer (Kauê) |

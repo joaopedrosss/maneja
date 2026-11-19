@@ -31,3 +31,14 @@ Funcionalidade: Persistência em PostgreSQL
     Quando eu crio o piquete "Piquete Novo" pela API
     E o sistema reinicia
     Então existe o "Piquete Novo"
+
+  Cenário: Modo sem estado (Vercel) grava e lê do banco a cada requisição
+    Dado a API sem estado ligada ao PostgreSQL
+    Quando eu gero o plano pela API sem estado
+    E aceito a movimentação do "Piquete Abóbora" pela API sem estado
+    Então outra requisição já vê o rebanho no "Piquete Macarrão"
+
+  Cenário: Coleiras não geram posição a cada requisição
+    Dado a API sem estado ligada ao PostgreSQL
+    Quando eu faço 5 requisições seguidas
+    Então o banco tem 10 posições de coleira

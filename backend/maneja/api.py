@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import secrets
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -70,16 +72,39 @@ def agora_real() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def criar_app(sistema: Sistema | None = None, auth: ConfigAuth | None = None, relogio=agora_real) -> FastAPI:
-    """`relogio` é a hora real usada nos tokens (o relógio do simulador não expira sessões)."""
-    app = FastAPI(title="Maneja", version="0.2.0")
-    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+_sistema_da_requisicao: ContextVar[Sistema | None] = ContextVar("sistema_da_requisicao", default=None)
+
+
+def criar_app(sistema: Sistema | None = None, auth: ConfigAuth | None = None, relogio=agora_real,
+              config: Config | None = None) -> FastAPI:
+    """`relogio` é a hora real usada nos tokens (o relógio do simulador não expira sessões).
+
+    Modo sem estado (Vercel, SPEC-013): cada requisição monta o Sistema a partir do banco,
+    e as operações que mudam dados gravam de volta antes de responder.
+    """
+    config = config or Config.do_ambiente()
+    sem_estado = sistema is None and config.sem_estado
+    if sem_estado and not config.database_url:
+        raise RuntimeError("MANEJA_SEM_ESTADO exige DATABASE_URL")
+    app = FastAPI(title="Maneja", version="0.3.0")
+    app.add_middleware(CORSMiddleware, allow_origins=list(config.cors_origens),
                        allow_methods=["*"], allow_headers=["*"])
-    app.state.sistema = sistema or montar_sistema(Config.do_ambiente())
+    app.state.sistema = None if sem_estado else (sistema or montar_sistema(config))
     app.state.auth = auth or auth_do_ambiente()
 
+    if sem_estado:
+        @app.middleware("http")
+        async def sistema_por_requisicao(request: Request, call_next):
+            if request.method == "OPTIONS":
+                return await call_next(request)
+            marca = _sistema_da_requisicao.set(await run_in_threadpool(montar_sistema, config))
+            try:
+                return await call_next(request)
+            finally:
+                _sistema_da_requisicao.reset(marca)
+
     def s() -> Sistema:
-        return app.state.sistema
+        return _sistema_da_requisicao.get() or app.state.sistema
 
     def executar(acao):
         try:
@@ -122,7 +147,8 @@ def criar_app(sistema: Sistema | None = None, auth: ConfigAuth | None = None, re
 
     @app.get("/saude")
     def saude() -> dict[str, Any]:
-        return {"status": "ok", "modo_seugado": s().seugado.modo, "agora": s().agora().isoformat()}
+        return {"status": "ok", "modo_seugado": s().seugado.modo, "agora": s().agora().isoformat(),
+                "banco": "postgresql" if config.database_url else "memoria", "sem_estado": sem_estado}
 
     @app.post("/auth/token")
     def login(corpo: LoginIn) -> dict[str, Any]:

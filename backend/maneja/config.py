@@ -45,6 +45,8 @@ class Config:
     perda_sinal: float = PERDA_SINAL_PADRAO
     semente: int | None = None
     database_url: str = ""  # vazio = memória (SPEC-008)
+    sem_estado: bool = False  # carrega do banco a cada requisição (Vercel, SPEC-013)
+    cors_origens: tuple[str, ...] = ("http://localhost:5173", "http://127.0.0.1:5173")
     semear: bool = True  # banco vazio recebe a fazenda de demonstração
 
     @classmethod
@@ -62,6 +64,9 @@ class Config:
             semente=int(semente) if semente else None,
             database_url=e.get("DATABASE_URL", ""),
             semear=e.get("MANEJA_SEMEAR", "1") == "1",
+            sem_estado=e.get("MANEJA_SEM_ESTADO", "1" if e.get("VERCEL") else "0") == "1",
+            cors_origens=tuple(o.strip() for o in e.get(
+                "MANEJA_CORS_ORIGENS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()),
         )
 
 
@@ -91,6 +96,6 @@ def montar_sistema(config: Config | None = None, inicio: datetime | None = None,
     if getattr(repo, "fisico", None):
         simulador.fisico.update(repo.fisico)
     sistema = Sistema(repo, clima or ClimaSimulado(), simulador, relogio, llm, adaptador_seugado(config))
-    sistema.gerar_posicoes()
+    sistema.atualizar_coleiras()
     sistema.verificacoes()  # com a integração ligada, registra quem está na origem de cada movimentação do SeuGado
     return sistema

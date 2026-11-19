@@ -41,6 +41,9 @@ def persiste(metodo):
     return envolto
 
 
+INTERVALO_COLEIRA_MIN = 10  # a validar com a ficha técnica da coleira
+
+
 class Conflito(Exception):
     """A operação não vale para o estado atual (por exemplo, aceitar o que já foi aceito)."""
 
@@ -276,6 +279,14 @@ class Sistema:
     # ---------- simulador do campo ----------
     def gerar_posicoes(self) -> int:
         return self.registrar_posicoes(self.simulador.gerar_posicoes(self.agora()))
+
+    def atualizar_coleiras(self) -> int:
+        """As coleiras reportam a cada INTERVALO_COLEIRA_MIN: só gera posições se a última leitura for mais antiga."""
+        agora = self.agora()
+        ultima = max((p.instante for p in self.repo.posicoes if p.instante <= agora), default=None)
+        if ultima is not None and agora - ultima < timedelta(minutes=INTERVALO_COLEIRA_MIN):
+            return 0
+        return self.gerar_posicoes()
 
     def simulador_avancar(self, horas: float) -> int:
         self.relogio.avancar(horas)

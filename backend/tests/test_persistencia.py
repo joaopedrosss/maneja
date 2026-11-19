@@ -109,3 +109,55 @@ def verificacao_e(ctx, status):
 @then(parsers.parse('existe o "{nome}"'))
 def existe(ctx, nome):
     assert nome in [p.nome for p in ctx["sistema"].repo.piquetes]
+
+
+# ---------- modo sem estado (SPEC-013) ----------
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from conftest import AUTH_TESTE, EMAIL_TESTE, SENHA_TESTE  # noqa: E402
+from maneja.api import criar_app  # noqa: E402
+
+
+@given("a API sem estado ligada ao PostgreSQL", target_fixture="url")
+def api_sem_estado(ctx, banco_limpo):
+    cfg = Config(perda_sinal=0.0, semente=7, database_url=banco_limpo, sem_estado=True)
+    c = TestClient(criar_app(auth=AUTH_TESTE, config=cfg))
+    token = c.post("/auth/token", json={"email": EMAIL_TESTE, "senha": SENHA_TESTE}).json()["access_token"]
+    c.headers["Authorization"] = f"Bearer {token}"
+    ctx["api"] = c
+    return banco_limpo
+
+
+@when("eu gero o plano pela API sem estado")
+def plano_sem_estado(ctx):
+    r = ctx["api"].post("/plano")
+    assert r.status_code == 200, r.text
+    ctx["plano"] = r.json()
+
+
+@when(parsers.parse('aceito a movimentação do "{origem}" pela API sem estado'))
+def aceita_sem_estado(ctx, origem):
+    mov = next(m for m in ctx["plano"]["movimentacoes"] if m["piquete_origem_nome"] == origem)
+    r = ctx["api"].post(f"/movimentacoes/{mov['id']}/aceitar")
+    assert r.status_code == 200, r.text
+
+
+@then(parsers.parse('outra requisição já vê o rebanho no "{nome}"'))
+def outra_requisicao(ctx, nome):
+    piquetes = {p["id"]: p["nome"] for p in ctx["api"].get("/piquetes").json()}
+    ocupados = [piquetes[l["piquete_id"]] for l in ctx["api"].get("/lotacao").json()
+                if l["bois"] + l["vacas"] + l["bezerros"] > 0]
+    assert nome in ocupados, ocupados
+
+
+@when(parsers.parse("eu faço {n:d} requisições seguidas"))
+def varias(ctx, n):
+    for _ in range(n):
+        assert ctx["api"].get("/coleiras").status_code == 200
+
+
+@then(parsers.parse("o banco tem {n:d} posições de coleira"))
+def posicoes_no_banco(url, n):
+    with psycopg.connect(url) as conn:
+        assert conn.execute("SELECT count(*) FROM posicao").fetchone()[0] == n

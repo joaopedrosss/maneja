@@ -28,10 +28,11 @@ Papéis da Gestão de RH: GER Jackson · FRN João Pedro · BCK Kauê · MID Mar
 | SPEC-009 | Autenticação (login e token) | Generic | 3 | Kauê | Júlia | 22/11 | ✅ feita |
 | SPEC-010 | Front ligado à API, mantendo o modo demonstração | Generic | 3, 8 | Kauê | João Pedro | 22/11 | ✅ feita |
 | SPEC-011 | Telas de coleiras e planejado × realizado | Support | 5, 8 | João Pedro e Maria Antônia | Leandro | 23/11 | a fazer |
-| SPEC-012 | Integração SeuGado em modo `api` | Integração | 9 | José Felix | Kauê | 23/11 | a fazer |
-| SPEC-013 | Deploy no Render (`render.yaml`) | Integração | 9 | José Felix | Jackson | 23/11 | a fazer |
+| SPEC-012 | Integração SeuGado em modo `api` | Integração | 9 | Kauê | José Felix | 23/11 | a fazer |
+| SPEC-013 | Deploy na Vercel + Supabase | Integração | 9 | Kauê | Jackson | 23/11 | código pronto; falta publicar |
+| SPEC-015 | Identidade visual própria (diferente do SeuGado) | Generic | 3, 8 | Kauê | João Pedro | 23/11 | a fazer |
 | SPEC-014 | Documentação SDD: UML em `.md`, roteiro e slides finais | Doc | 11 | Jackson e Júlia | todos | 25/11 | em andamento |
-| — | Rodada de testes BDD e defeitos (severidade 1 e 2 bloqueiam) | Teste | 10 | Júlia | — | 24/11 | a fazer |
+| — | Rodada de testes BDD e defeitos (severidade 1 e 2 bloqueiam) | Teste | 10 | Júlia e José Felix | — | 24/11 | a fazer |
 
 ## Semana
 

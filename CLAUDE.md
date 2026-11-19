@@ -60,6 +60,7 @@ cd backend && uv sync                                      # instala dependênci
 cd backend && uv run pytest                                # todos os testes
 cd backend && uv run uvicorn maneja.api:app --reload       # API em http://localhost:8000
 npm run dev                                                # front em http://localhost:5173
+# deploy (Vercel + Supabase): docs/04-deploy.md
 ```
 
 ## Convenções

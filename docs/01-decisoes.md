@@ -14,3 +14,6 @@ Uma linha por decisão. Para mudar uma, acrescente outra que a substitua; não a
 | D8 | 19/11 | BDD com `pytest-bdd`: cada spec traz cenários que viram `.feature` | Exigência da AB2 (SDD + BDD) |
 | D9 | 19/11 | PostgreSQL por "estado em memória + gravação transacional do todo" (substitui a D6) | Mantém a interface do repositório e cabe no prazo; o volume da demonstração é pequeno |
 | D10 | 19/11 | O `main` do fork `kaeffea/maneja` é o branch de integração; o PR #1 leva tudo ao repositório do João | O Kauê não tem permissão de escrita no repositório original |
+| D11 | 19/11 | Deploy na Vercel (front e API, região gru1) com PostgreSQL no Supabase, no lugar do Render | Mesma infraestrutura que o Kauê já opera no SeuGado; continua gratuita |
+| D12 | 19/11 | Tudo que envolve o SeuGado (SPEC-012 e a ADR do lado de lá) é com o Kauê | Ele é o dono do SeuGado |
+| D13 | 19/11 | O visual do Maneja tem identidade própria, diferente do SeuGado (SPEC-015) | São sistemas diferentes e precisam parecer diferentes |

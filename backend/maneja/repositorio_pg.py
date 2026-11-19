@@ -9,7 +9,7 @@ As posições das coleiras só crescem: cada `salvar()` grava apenas as novas.
 from __future__ import annotations
 
 import dataclasses
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import psycopg
@@ -30,6 +30,12 @@ from .dominio import (
 from .repositorio import RepositorioMemoria
 
 SCHEMA = Path(__file__).resolve().parent.parent / "db" / "schema.sql"
+POSICOES_CARREGADAS_H = 24  # só as posições recentes interessam (ocupação e verificação usam 6 h)
+
+
+def conectar(url: str) -> psycopg.Connection:
+    """prepare_threshold=None: o pooler do Supabase em modo transação (porta 6543) não aceita prepared statements."""
+    return psycopg.connect(url, prepare_threshold=None)
 
 
 def movimentacao_de_dict(d: dict) -> Movimentacao:
@@ -61,8 +67,10 @@ class RepositorioPg(RepositorioMemoria):
     @classmethod
     def abrir(cls, url: str, semente: RepositorioMemoria | None) -> RepositorioPg:
         """Cria as tabelas, carrega o estado e, com o banco vazio, grava `semente` (a fazenda de demonstração)."""
-        with psycopg.connect(url) as conn:
-            conn.execute(SCHEMA.read_text(encoding="utf-8"))
+        with conectar(url) as conn:
+            # aplica o schema só se faltar alguma tabela (evita locks a cada requisição no modo sem estado)
+            if conn.execute("SELECT to_regclass('public.parametro') IS NULL").fetchone()[0]:
+                conn.execute(SCHEMA.read_text(encoding="utf-8"))
             vazio = conn.execute("SELECT count(*) FROM fazenda").fetchone()[0] == 0
         if vazio:
             base = semente or RepositorioMemoria(fazenda=Fazenda("fazenda", "Minha fazenda", "America/Maceio"))
@@ -74,7 +82,9 @@ class RepositorioPg(RepositorioMemoria):
 
     @classmethod
     def _carregar(cls, url: str) -> RepositorioPg:
-        with psycopg.connect(url) as conn:
+        with conectar(url) as conn:
+            desl = conn.execute("SELECT valor FROM parametro WHERE chave = 'deslocamento_relogio_s'").fetchone()
+            deslocamento_s = float(desl[0]) if desl else 0.0
             f = conn.execute("SELECT id, nome, timezone FROM fazenda LIMIT 1").fetchone()
             repo = cls(url, fazenda=Fazenda(*f))
             repo.piquetes = [Piquete(*r) for r in conn.execute(
@@ -90,19 +100,19 @@ class RepositorioPg(RepositorioMemoria):
             linhas = conn.execute("SELECT id, categoria, piquete_cadastro_id, piquete_fisico_id FROM coleira ORDER BY ordem").fetchall()
             repo.coleiras = [Coleira(r[0], r[1], r[2]) for r in linhas]
             repo.fisico = {r[0]: r[3] for r in linhas}
+            limite = datetime.now(timezone.utc) + timedelta(seconds=deslocamento_s) - timedelta(hours=POSICOES_CARREGADAS_H)
             repo.posicoes = [Posicao(*r) for r in conn.execute(
-                "SELECT coleira_id, instante, lat, lon FROM posicao ORDER BY id")]
+                "SELECT coleira_id, instante, lat, lon FROM posicao WHERE instante >= %s ORDER BY id", (limite,))]
             repo._posicoes_gravadas = len(repo.posicoes)
             repo.grupos_externos = {r[0]: list(r[1]) for r in conn.execute("SELECT externo_id, coleiras FROM grupo_externo")}
-            desl = conn.execute("SELECT valor FROM parametro WHERE chave = 'deslocamento_relogio_s'").fetchone()
-            repo.deslocamento_s = float(desl[0]) if desl else 0.0
+            repo.deslocamento_s = deslocamento_s
         return repo
 
     # ---------- salvar ----------
 
     def salvar(self) -> None:
         """Grava o estado inteiro numa transação (tudo ou nada)."""
-        with psycopg.connect(self.url) as conn, conn.transaction():
+        with conectar(self.url) as conn, conn.transaction():
             for tabela in ("lotacao", "leitura_ndvi", "movimentacao", "plano_atual", "coleira", "grupo_externo", "piquete", "fazenda"):
                 conn.execute(f"DELETE FROM {tabela}")  # noqa: S608 - nomes fixos
             f = self.fazenda
