@@ -57,4 +57,4 @@ O que NÃO fazer.
 | [012](SPEC-012-seugado-modo-api.md) | Integração SeuGado em modo `api` | a fazer (Kauê) |
 | [013](SPEC-013-deploy-vercel.md) | Deploy na Vercel + Supabase | código pronto; falta publicar |
 | [014](SPEC-014-documentacao-sdd.md) | Documentação SDD e apresentação | em andamento |
-| [015](SPEC-015-identidade-visual.md) | Identidade visual própria | a fazer (Kauê) |
+| [015](SPEC-015-identidade-visual.md) | Identidade visual própria | feita |

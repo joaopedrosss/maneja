@@ -30,3 +30,12 @@ O front nasceu de um protótipo do SeuGado e ainda se parece com ele: menu later
 
 ## Fora do escopo
 Modo escuro. Mudar textos, fluxos ou a escala de NDVI.
+
+## Como ficou
+- **Tokens e tipografia (`src/estilo/tema.css`, `index.html`):** paleta "campo" (azul-petróleo `#1F5A73`, barro `#C8742B`, palha `#F5F2EA`, superfície `#FFFFFF`, texto `#1E2A2F`), fonte Manrope pelo Google Fonts, cantos de 10 px, cartões com borda de 1 px em vez de sombra e botões com altura mínima de 40 px. A escala de NDVI foi preservada.
+- **Navegação (`src/componentes/Layout.tsx`, `Layout.css`):** barra superior branca de 60 px com marca à esquerda ("Maneja", sem "· Admin"), abas no centro (ativo em azul-petróleo com indicador barro de 3 px) e avatar, usuário, fazenda e "Sair" à direita. Até 640 px, as abas viram barra inferior fixa de 64 px com ícones e rótulos curtos, e `--altura-topo` compensa ambas as barras para o mapa.
+- **Marca e favicon (`src/componentes/ui/Icones.tsx`, `public/favicon.svg`):** polígono de piquete em azul-petróleo com marcador de GPS em barro.
+- **Páginas (`src/paginas/*.css`, `src/componentes/ui/GraficoNdvi.*`):** cores fixas removidas, botões e cartões alinhados aos tokens, e ajustes responsivos para 360 px (incluindo o gráfico SVG do Dashboard sem rolagem horizontal).
+
+## Situação
+Feita em 19/11 (Kauê). Testada no navegador em todas as 7 telas (Mapa, Plano, Rebanho, Histórico, Dashboard, Fazenda e Login), nos modos API e demonstração, em desktop (1280×800) e celular (360×740), sem rolagem horizontal. `npx tsc -b`, `npm run build` e `uv run pytest` (39 cenários) passando.
