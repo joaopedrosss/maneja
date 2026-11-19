@@ -1,48 +1,45 @@
-// Estado da aplicação de demonstração (substitui a API e o banco).
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
-import { gerarPlano as gerarPlanoAgente, alturaEm, type Base } from "./agente";
+// Estado da aplicação. Com VITE_API_URL definida, tudo vem da API (backend/);
+// sem ela, roda o modo demonstração em memória (decisão D7, SPEC-010).
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { api, carregarBase, EVENTO_SESSAO_EXPIRADA, lerToken, mensagemDeErro, sair, USAR_API, API_URL } from "./api";
+import Login from "../paginas/Login";
+import { gerarRecomendacao } from "./agente";
 import { hojeNaFazenda } from "./datas";
-import { baseInicial, USUARIO } from "./demo";
+import { baseInicial, USUARIO, type Base } from "./demo";
 import { areaHa } from "./geo";
-import type { Fazenda, GeoJsonPolygon, PlanoManejo } from "./tipos";
+import { ultimaLeitura } from "./ndvi";
+import { lotacaoDe, totalAnimais } from "./rebanho";
+import { validarMovimento } from "./regras";
+import type { Fazenda, GeoJsonPolygon, Movimentacao, PlanoManejo, Rebanho } from "./tipos";
 
 export interface EstadoDemo extends Base {
-  planos: Record<string, PlanoManejo>; // fazenda_id → plano atual
+  plano: PlanoManejo | null;
 }
 
-export type DadosFazenda = Pick<
-  Fazenda,
-  | "nome"
-  | "funcionarios_disponiveis"
-  | "animais_por_funcionario_dia"
-  | "dias_preferenciais_manejo"
-  | "envio_plano_dia"
-  | "envio_plano_hora"
->;
+export type DadosFazenda = Pick<Fazenda, "nome">;
 
 export interface NovoPiquete {
   nome: string;
-  cultivar_id: string;
+  vegetacao: string;
   geometria: GeoJsonPolygon;
-  altura_cm: number;
-  data_medicao: string;
 }
 
+// As ações devolvem uma mensagem de erro (ou null) quando podem ser recusadas.
 interface Contexto {
+  modo: "api" | "demo";
   usuario: typeof USUARIO;
   estado: EstadoDemo;
-  fazendas: Fazenda[];
-  fazenda: Fazenda | null;
+  fazenda: Fazenda;
   hoje: string;
-  selecionar: (id: string) => void;
-  salvarFazenda: (dados: DadosFazenda) => void;
-  atualizarStatusTelegram: () => Promise<boolean>;
-  criarPiquete: (dados: NovoPiquete) => string;
-  atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => void;
-  desativarPiquete: (piqueteId: string) => string | null;
-  registrarMedicao: (piqueteId: string, alturaCm: number, data: string) => void;
+  salvarFazenda: (dados: DadosFazenda) => Promise<string | null>;
+  criarPiquete: (dados: NovoPiquete) => Promise<string>;
+  atualizarGeometria: (piqueteId: string, geometria: GeoJsonPolygon) => Promise<string | null>;
+  desativarPiquete: (piqueteId: string) => Promise<string | null>;
   gerarPlano: () => Promise<PlanoManejo>;
-  executarMovimentacao: (movimentacaoId: string, destinoId?: string) => string | null;
+  salvarLotacao: (piqueteId: string, rebanho: Rebanho) => Promise<string | null>;
+  executarMovimentacao: (movimentacaoId: string, destinoId?: string) => Promise<string | null>;
+  recusarMovimentacao: (movimentacaoId: string) => Promise<string | null>;
+  sair?: () => void; // só no modo API
 }
 
 const ContextoFazenda = createContext<Contexto | null>(null);
@@ -50,48 +47,44 @@ const ContextoFazenda = createContext<Contexto | null>(null);
 const FUSO = "America/Maceio";
 const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function recomendar(base: Base, hoje: string, agora?: Date): PlanoManejo {
+  const { piquetes, ndvi, clima, lotacao, historico } = base;
+  return gerarRecomendacao({ piquetes, ndvi, clima, lotacao, historico }, hoje, agora);
+}
+
+function comMovimentacao(plano: PlanoManejo, mov: Movimentacao): PlanoManejo {
+  return { ...plano, movimentacoes: plano.movimentacoes.map((m) => (m.id === mov.id ? mov : m)) };
+}
+
 function estadoInicial(): EstadoDemo {
   const hoje = hojeNaFazenda(FUSO);
   const base = baseInicial(hoje);
-  // a Fazenda do Marcinho já começa com um plano; o Sítio Boa Vista ainda não
+  // a demonstração já começa com um plano
   const geradoAs = new Date();
   geradoAs.setHours(7, 48, 0, 0);
-  const plano = gerarPlanoAgente(base, "faz-marcinho", hoje, geradoAs);
-  return { ...base, planos: { "faz-marcinho": plano } };
+  return { ...base, plano: recomendar(base, hoje, geradoAs) };
 }
 
-export function FazendaProvider({ children }: { children: ReactNode }) {
+function ProviderDemo({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoDemo>(estadoInicial);
-  const [fazendaId, setFazendaId] = useState<string>("faz-marcinho");
   // cópia síncrona do estado: `alterar` é o único caminho de escrita e a mantém em dia
   const atual = useRef(estado);
 
-  const fazenda = estado.fazendas.find((f) => f.id === fazendaId) ?? null;
-  const hoje = hojeNaFazenda(fazenda?.timezone ?? FUSO);
+  const fazenda = estado.fazenda;
+  const fazendaId = fazenda.id;
+  const hoje = hojeNaFazenda(fazenda.timezone);
 
   function alterar(transformar: (e: EstadoDemo) => EstadoDemo): void {
     atual.current = transformar(atual.current);
     setEstado(atual.current);
   }
 
-  function salvarFazenda(dados: DadosFazenda): void {
-    alterar((e) => ({
-      ...e,
-      fazendas: e.fazendas.map((f) => (f.id === fazendaId ? { ...f, ...dados } : f)),
-    }));
+  async function salvarFazenda(dados: DadosFazenda): Promise<string | null> {
+    alterar((e) => ({ ...e, fazenda: { ...e.fazenda, ...dados } }));
+    return null;
   }
 
-  async function atualizarStatusTelegram(): Promise<boolean> {
-    await espera(700);
-    // Demonstração: considera que o produtor abriu o link e tocou em "Começar".
-    alterar((e) => ({
-      ...e,
-      fazendas: e.fazendas.map((f) => (f.id === fazendaId ? { ...f, telegram_vinculado: true } : f)),
-    }));
-    return true;
-  }
-
-  function criarPiquete(dados: NovoPiquete): string {
+  async function criarPiquete(dados: NovoPiquete): Promise<string> {
     const id = `pq-${Date.now().toString(36)}`;
     alterar((e) => ({
       ...e,
@@ -101,94 +94,97 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
           id,
           fazenda_id: fazendaId,
           nome: dados.nome.trim(),
-          cultivar_id: dados.cultivar_id,
+          vegetacao: dados.vegetacao.trim(),
           geometria: dados.geometria,
           area_ha: areaHa(dados.geometria),
-          metodo_pastejo: "rotacionado",
         },
-      ],
-      medicoes: [
-        ...e.medicoes,
-        { piquete_id: id, data: dados.data_medicao, altura_cm: dados.altura_cm, origem: "campo" },
       ],
     }));
     return id;
   }
 
-  function atualizarGeometria(piqueteId: string, geometria: GeoJsonPolygon): void {
+  async function atualizarGeometria(piqueteId: string, geometria: GeoJsonPolygon): Promise<string | null> {
     alterar((e) => ({
       ...e,
       piquetes: e.piquetes.map((p) =>
         p.id === piqueteId ? { ...p, geometria, area_ha: areaHa(geometria) } : p,
       ),
     }));
-  }
-
-  function desativarPiquete(piqueteId: string): string | null {
-    const lote = atual.current.lotes.find((l) => l.piquete_atual_id === piqueteId);
-    if (lote) return `${lote.nome} está neste piquete. Mova o lote antes de desativar.`;
-    alterar((e) => ({ ...e, piquetes: e.piquetes.filter((p) => p.id !== piqueteId) }));
     return null;
   }
 
-  function registrarMedicao(piqueteId: string, alturaCm: number, data: string): void {
+  async function desativarPiquete(piqueteId: string): Promise<string | null> {
+    if (lotacaoDe(atual.current.lotacao, piqueteId)) return "Há gado neste piquete. Mova os animais antes de desativar.";
     alterar((e) => ({
       ...e,
-      medicoes: [...e.medicoes, { piquete_id: piqueteId, data, altura_cm: alturaCm, origem: "campo" }],
+      piquetes: e.piquetes.filter((p) => p.id !== piqueteId),
+      ndvi: e.ndvi.filter((l) => l.piquete_id !== piqueteId),
+      lotacao: e.lotacao.filter((l) => l.piquete_id !== piqueteId),
     }));
+    return null;
+  }
+
+  async function salvarLotacao(piqueteId: string, rebanho: Rebanho): Promise<string | null> {
+    alterar((e) => {
+      const outras = e.lotacao.filter((l) => l.piquete_id !== piqueteId);
+      if (totalAnimais(rebanho) === 0) return { ...e, lotacao: outras };
+      const desde = lotacaoDe(e.lotacao, piqueteId)?.desde ?? hoje;
+      return { ...e, lotacao: [...outras, { piquete_id: piqueteId, fazenda_id: fazendaId, ...rebanho, desde }] };
+    });
+    return null;
   }
 
   async function gerarPlano(): Promise<PlanoManejo> {
-    const alvo = fazendaId;
-    await espera(1600); // simula a consulta a dados, clima e o tempo de análise do agente
-    const plano = gerarPlanoAgente(atual.current, alvo, hoje);
-    alterar((e) => ({ ...e, planos: { ...e.planos, [alvo]: plano } }));
+    await espera(1600); // simula a consulta ao NDVI, ao clima e o tempo de análise do agente
+    const plano = recomendar(atual.current, hoje);
+    alterar((e) => ({ ...e, plano }));
     return plano;
   }
 
   // Aceitar a recomendação (ou escolher outro destino) registra a movimentação:
-  // o lote passa a ocupar o destino a partir de hoje e o mapa se atualiza.
-  function executarMovimentacao(movimentacaoId: string, destinoId?: string): string | null {
+  // o rebanho passa a ocupar o destino a partir de hoje e o mapa se atualiza.
+  async function executarMovimentacao(movimentacaoId: string, destinoId?: string): Promise<string | null> {
     const e = atual.current;
-    const plano = e.planos[fazendaId];
+    const plano = e.plano;
     const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
     if (!plano || !mov) return "Movimentação não encontrada.";
-    const destino = e.piquetes.find((p) => p.id === (destinoId ?? mov.piquete_destino_id));
-    if (!destino) return "Piquete de destino não existe mais.";
-    const lote = e.lotes.find((l) => l.id === mov.lote_id);
-    if (!lote) return "Lote não encontrado.";
-    const outro = e.lotes.find((l) => l.piquete_atual_id === destino.id && l.id !== lote.id);
-    if (outro) return `${destino.nome} já está ocupado pelo ${outro.nome}.`;
-    if (lote.piquete_atual_id === destino.id) return `${lote.nome} já está em ${destino.nome}.`;
+    const origem = lotacaoDe(e.lotacao, mov.piquete_origem_id);
+    if (!origem) return "O piquete de origem está sem animais. Gere um novo plano.";
 
-    // fixa a altura estimada de hoje como ponto de partida das próximas estimativas
-    const marcos = [lote.piquete_atual_id, destino.id]
-      .map((id) => e.piquetes.find((p) => p.id === id))
-      .filter((p) => p !== undefined)
-      .map((p) => ({ piquete_id: p.id, data: hoje, altura_cm: alturaEm(e, p, hoje), origem: "estimativa" as const }))
-      .filter((m): m is typeof m & { altura_cm: number } => m.altura_cm !== null);
+    const destinoFinal = destinoId ?? mov.piquete_destino_id;
+    const rebanho = { bois: origem.bois, vacas: origem.vacas, bezerros: origem.bezerros };
+    const falhas = validarMovimento(destinoFinal, rebanho, { piquetes: e.piquetes, ndvi: e.ndvi, lotacao: e.lotacao, hoje });
+    if (falhas.length > 0) return `Não dá para mover: ${falhas.join("; ")}.`;
 
+    const destino = e.piquetes.find((p) => p.id === destinoFinal)!;
+    const trocado = destino.id !== mov.piquete_destino_id;
+    const registrada: Movimentacao = {
+      ...mov,
+      rebanho,
+      status: trocado ? "trocada" : "aceita",
+      destino_trocado: trocado,
+      piquete_destino_id: destino.id,
+      piquete_destino_nome: destino.nome,
+      ndvi_destino: ultimaLeitura(e.ndvi, destino.id, hoje)!.valor,
+    };
     alterar((s) => ({
       ...s,
-      medicoes: [...s.medicoes, ...marcos],
-      lotes: s.lotes.map((l) => (l.id === lote.id ? { ...l, piquete_atual_id: destino.id, desde: hoje } : l)),
-      planos: {
-        ...s.planos,
-        [fazendaId]: {
-          ...plano,
-          movimentacoes: plano.movimentacoes.map((m) =>
-            m.id === mov.id
-              ? {
-                  ...m,
-                  status: "realizada",
-                  destino_trocado: destino.id !== mov.piquete_destino_id,
-                  piquete_destino_id: destino.id,
-                  piquete_destino_nome: destino.nome,
-                }
-              : m,
-          ),
-        },
-      },
+      lotacao: s.lotacao.map((l) => (l === origem ? { ...l, piquete_id: destino.id, desde: hoje } : l)),
+      historico: [{ ...registrada, data: hoje }, ...s.historico],
+      plano: comMovimentacao(plano, registrada),
+    }));
+    return null;
+  }
+
+  async function recusarMovimentacao(movimentacaoId: string): Promise<string | null> {
+    const plano = atual.current.plano;
+    const mov = plano?.movimentacoes.find((m) => m.id === movimentacaoId);
+    if (!plano || !mov) return "Movimentação não encontrada.";
+    const recusada: Movimentacao = { ...mov, status: "recusada" };
+    alterar((s) => ({
+      ...s,
+      historico: [{ ...recusada, data: hoje }, ...s.historico],
+      plano: comMovimentacao(plano, recusada),
     }));
     return null;
   }
@@ -196,25 +192,116 @@ export function FazendaProvider({ children }: { children: ReactNode }) {
   return (
     <ContextoFazenda.Provider
       value={{
+        modo: "demo",
         usuario: USUARIO,
         estado,
-        fazendas: estado.fazendas,
         fazenda,
         hoje,
-        selecionar: setFazendaId,
         salvarFazenda,
-        atualizarStatusTelegram,
         criarPiquete,
         atualizarGeometria,
         desativarPiquete,
-        registrarMedicao,
         gerarPlano,
+        salvarLotacao,
         executarMovimentacao,
+        recusarMovimentacao,
       }}
     >
       {children}
     </ContextoFazenda.Provider>
   );
+}
+
+// ---------- modo API ----------
+
+function ProviderApi({ children }: { children: ReactNode }) {
+  const [logado, setLogado] = useState(() => lerToken() !== null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [estado, setEstado] = useState<EstadoDemo | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const recarregar = useCallback(async (): Promise<EstadoDemo> => {
+    const base = await carregarBase();
+    setEstado(base);
+    setErro(null);
+    return base;
+  }, []);
+
+  // 401 em qualquer chamada: volta para o login (critério de qualidade 4.2)
+  useEffect(() => {
+    const expirou = () => {
+      setLogado(false);
+      setEstado(null);
+      setAviso("Sua sessão expirou. Entre de novo.");
+    };
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+    return () => window.removeEventListener(EVENTO_SESSAO_EXPIRADA, expirou);
+  }, []);
+
+  useEffect(() => {
+    if (!logado) return;
+    recarregar().catch((e: unknown) => setErro(mensagemDeErro(e)));
+  }, [logado, recarregar]);
+
+  if (!logado) {
+    return <Login aviso={aviso} aoEntrar={() => { setAviso(null); setErro(null); setLogado(true); }} />;
+  }
+
+  if (erro !== null && estado === null) {
+    return (
+      <div className="aviso-alerta" role="alert" style={{ margin: 24 }}>
+        Não foi possível carregar os dados: {erro}. Confira se o backend está rodando em {API_URL}
+        {" "}(<code>cd backend && uv run uvicorn maneja.api:app --reload</code>).
+      </div>
+    );
+  }
+  if (estado === null) return <p style={{ margin: 24 }}>Carregando dados da fazenda…</p>;
+
+  // executa a ação na API e recarrega tudo; devolve a mensagem de erro, se houver
+  async function acao(fazer: () => Promise<unknown>): Promise<string | null> {
+    try {
+      await fazer();
+      await recarregar();
+      return null;
+    } catch (e) {
+      return mensagemDeErro(e);
+    }
+  }
+
+  const fazenda = estado.fazenda;
+  const valor: Contexto = {
+    modo: "api",
+    usuario: USUARIO,
+    estado,
+    fazenda,
+    hoje: hojeNaFazenda(fazenda.timezone),
+    salvarFazenda: (dados) => acao(() => api.salvarFazenda(dados.nome)),
+    criarPiquete: async (dados) => {
+      const piquete = await api.criarPiquete(dados.nome.trim(), dados.vegetacao.trim(), dados.geometria);
+      await recarregar();
+      return piquete.id;
+    },
+    atualizarGeometria: (id, geometria) => acao(() => api.atualizarGeometria(id, geometria)),
+    desativarPiquete: (id) => acao(() => api.removerPiquete(id)),
+    gerarPlano: async () => {
+      const plano = await api.gerarPlano();
+      await recarregar();
+      return plano;
+    },
+    salvarLotacao: (id, rebanho) => acao(() => api.salvarLotacao(id, rebanho)),
+    executarMovimentacao: (id, destinoId) => acao(() => api.aceitar(id, destinoId)),
+    recusarMovimentacao: (id) => acao(() => api.recusar(id)),
+    sair: () => {
+      sair();
+      setEstado(null);
+      setLogado(false);
+    },
+  };
+  return <ContextoFazenda.Provider value={valor}>{children}</ContextoFazenda.Provider>;
+}
+
+export function FazendaProvider({ children }: { children: ReactNode }) {
+  return USAR_API ? <ProviderApi>{children}</ProviderApi> : <ProviderDemo>{children}</ProviderDemo>;
 }
 
 export function useFazenda(): Contexto {

@@ -37,11 +37,6 @@ export function diasEntre(inicio: string, fim: string): number {
   return Math.round((meioDia(fim).getTime() - meioDia(inicio).getTime()) / 86_400_000);
 }
 
-// 0 = segunda … 6 = domingo (mesma convenção do cadastro da fazenda)
-export function diaDaSemana(data: string): number {
-  return (meioDia(data).getUTCDay() + 6) % 7;
-}
-
 export function fimDoPlano(inicio: string, horizonteDias: number): string {
   return somarDias(inicio, horizonteDias - 1);
 }

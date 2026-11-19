@@ -1,21 +1,22 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { Icone, type NomeIcone } from "../componentes/ui/Icones";
-import { resumoPiquetes } from "../lib/agente";
+import { CHUVA_FORTE_MM, resumoClima } from "../lib/clima";
 import { dataComDia, decimal, fimDoPlano } from "../lib/datas";
 import { useFazenda } from "../lib/fazenda";
-import type { Confianca, Fazenda, Movimentacao, PedidoValidacao, PlanoManejo, TipoAlerta } from "../lib/tipos";
+import { resumoPiquetes } from "../lib/ndvi";
+import { descreverRebanho, lotacaoDe, totalAnimais } from "../lib/rebanho";
+import { validarMovimento } from "../lib/regras";
+import type { Confianca, Movimentacao, PrevisaoClima, TipoAlerta } from "../lib/tipos";
 import "./Plano.css";
 
 const CONFIANCA: Record<Confianca, string> = { alta: "alta", media: "média", baixa: "baixa" };
 const ICONES_ALERTA: Record<TipoAlerta, NomeIcone> = {
   sem_piquete_apto: "alerta",
-  capacidade_excedida: "clientes",
-  sem_dia_de_manejo: "calendario",
   passando_do_ponto: "relogio",
   pronto_para_pastejo: "ok",
   falta_capim: "alerta",
-  sem_medicao: "pergunta",
+  alerta_clima: "chuva",
 };
 
 function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[]][] {
@@ -27,45 +28,63 @@ function movimentosPorDia(movimentacoes: Movimentacao[]): [string, Movimentacao[
 // ---------- uma recomendação de movimentação ----------
 
 function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boolean }) {
-  const { estado, fazenda, hoje, executarMovimentacao } = useFazenda();
+  const { estado, hoje, executarMovimentacao, recusarMovimentacao } = useFazenda();
   const [escolhendo, setEscolhendo] = useState(false);
   const [destino, setDestino] = useState("");
   const [erro, setErro] = useState<string | null>(null);
 
-  const lote = estado.lotes.find((l) => l.id === mov.lote_id);
-  const opcoes = fazenda
-    ? resumoPiquetes(estado, fazenda.id, hoje)
-        .filter((r) => r.situacao === "descansando" && r.altura_hoje_cm !== null)
-        .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== lote?.piquete_atual_id)
-        .sort((a, b) => b.altura_hoje_cm! - a.altura_hoje_cm!)
-    : [];
+  // só aparecem os piquetes que passam nas mesmas regras da recomendação
+  const dados = { piquetes: estado.piquetes, ndvi: estado.ndvi, lotacao: estado.lotacao, hoje };
+  const opcoes = resumoPiquetes(estado.piquetes, estado.ndvi, estado.lotacao, hoje)
+    .filter((r) => r.piquete_id !== mov.piquete_destino_id && r.piquete_id !== mov.piquete_origem_id)
+    .filter((r) => validarMovimento(r.piquete_id, lotacaoDe(estado.lotacao, mov.piquete_origem_id) ?? mov.rebanho, dados).length === 0)
+    .sort((a, b) => b.ndvi! - a.ndvi!);
 
-  function confirmar(destinoId?: string): void {
+  async function confirmar(destinoId?: string): Promise<void> {
     setErro(null);
-    const falha = executarMovimentacao(mov.id, destinoId);
+    const falha = await executarMovimentacao(mov.id, destinoId);
     if (falha) setErro(falha);
     else setEscolhendo(false);
   }
 
-  const realizada = mov.status === "realizada";
+  async function recusar(): Promise<void> {
+    setErro(null);
+    const falha = await recusarMovimentacao(mov.id);
+    if (falha) setErro(falha);
+  }
+
+  const realizada = mov.status === "aceita" || mov.status === "trocada";
+  const recusada = mov.status === "recusada";
 
   return (
-    <article className={realizada ? "cartao plano-movimento plano-movimento-feito" : "cartao plano-movimento"}>
+    <article className={`cartao plano-movimento${realizada ? " plano-movimento-feito" : ""}${recusada ? " plano-movimento-recusado" : ""}`}>
       <div className="plano-movimento-topo">
         <h4 className="cartao-titulo">
-          Mover {mov.lote_nome} ({mov.n_animais} animais): {mov.piquete_origem_nome ?? "sem piquete"}{" "}
+          Mover {totalAnimais(mov.rebanho)} animais: {mov.piquete_origem_nome}{" "}
           <span className="plano-seta">→</span> {mov.piquete_destino_nome}
         </h4>
         <span className={`selo selo-${mov.confianca}`}>Confiança {CONFIANCA[mov.confianca]}</span>
       </div>
+      <p className="cartao-subtitulo">{descreverRebanho(mov.rebanho)}</p>
       <p>{mov.motivo}</p>
-      <p className="plano-previsao">Previsão: {mov.dias_previstos} {mov.dias_previstos === 1 ? "dia" : "dias"} no piquete</p>
+      {mov.explicacao_origem === "llm" && mov.explicacao ? (
+        <p className="aviso-info">
+          <span className="selo selo-alta">IA</span> {mov.explicacao}
+        </p>
+      ) : null}
+      <p className="plano-previsao">
+        NDVI: {decimal(mov.ndvi_origem, 2)} → {decimal(mov.ndvi_destino, 2)}
+      </p>
       <p className="cartao-subtitulo">{mov.motivo_confianca}</p>
 
       {realizada ? (
         <p className="aviso-info plano-feito" role="status">
-          Movimentação registrada ✓ — {mov.lote_nome} está no {mov.piquete_destino_nome} desde hoje
-          {mov.destino_trocado ? " (piquete escolhido pelo técnico)" : ""}. <Link to="/mapa">Ver no mapa</Link>
+          Movimentação registrada ✓ — o rebanho está no {mov.piquete_destino_nome} desde hoje
+          {mov.destino_trocado ? ` (no lugar do ${mov.destino_recomendado_nome}, recomendado)` : ""}. <Link to="/mapa">Ver no mapa</Link>
+        </p>
+      ) : recusada ? (
+        <p className="aviso-alerta plano-feito" role="status">
+          Recomendação recusada. Gere um novo plano para ver outra sugestão.
         </p>
       ) : escolhendo ? (
         <div className="plano-escolha">
@@ -75,16 +94,14 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
               <option value="" disabled>Selecione…</option>
               {opcoes.map((r) => (
                 <option key={r.piquete_id} value={r.piquete_id}>
-                  {`${r.nome} — ${decimal(r.altura_hoje_cm!, 0)} cm (entrada ${r.altura_entrada_alvo_cm} cm)${
-                    r.altura_hoje_cm! < r.altura_entrada_alvo_cm ? " · abaixo da entrada" : ""
-                  }`}
+                  {`${r.nome} — NDVI ${decimal(r.ndvi!, 2)}`}
                 </option>
               ))}
             </select>
           </label>
-          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete livre com medição.</p> : null}
+          {opcoes.length === 0 ? <p className="cartao-subtitulo">Não há outro piquete apto a receber este rebanho.</p> : null}
           <div className="formulario-acoes">
-            <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => confirmar(destino)}>
+            <button className="botao botao-primario" disabled={bloqueado || destino === ""} onClick={() => void confirmar(destino)}>
               Confirmar com este piquete
             </button>
             <button className="botao botao-secundario" onClick={() => { setEscolhendo(false); setErro(null); }}>
@@ -94,11 +111,14 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
         </div>
       ) : (
         <div className="formulario-acoes plano-acoes">
-          <button className="botao botao-primario" disabled={bloqueado} onClick={() => confirmar()}>
+          <button className="botao botao-primario" disabled={bloqueado} onClick={() => void confirmar()}>
             Confirmar movimentação
           </button>
           <button className="botao botao-secundario" disabled={bloqueado} onClick={() => setEscolhendo(true)}>
             Escolher outro piquete
+          </button>
+          <button className="botao botao-secundario" disabled={bloqueado} onClick={() => void recusar()}>
+            Recusar
           </button>
         </div>
       )}
@@ -107,67 +127,42 @@ function CartaoMovimento({ mov, bloqueado }: { mov: Movimentacao; bloqueado: boo
   );
 }
 
-// ---------- medição pedida pelo agente ----------
+// ---------- previsão do tempo ----------
 
-function Medicao({ pedido, bloqueado }: { pedido: PedidoValidacao; bloqueado: boolean }) {
-  const { hoje, registrarMedicao } = useFazenda();
-  const [altura, setAltura] = useState("");
-  const [data, setData] = useState(hoje);
-  const [salvo, setSalvo] = useState(false);
-
-  function registrar(evento: FormEvent<HTMLFormElement>): void {
-    evento.preventDefault();
-    if (bloqueado || salvo) return;
-    registrarMedicao(pedido.piquete_id, Number(altura), data);
-    setSalvo(true);
-  }
-
+function ResumoClima({ clima }: { clima: PrevisaoClima }) {
+  const resumo = resumoClima(clima);
   return (
-    <form className="cartao plano-medicao" onSubmit={registrar}>
-      <h3 className="cartao-titulo">{pedido.piquete_nome}</h3>
-      <p>{pedido.motivo}</p>
-      {salvo ? (
-        <p className="aviso-info" role="status">
-          Medição de {altura} cm registrada. Gere um novo plano para considerar esta medida.
-        </p>
-      ) : (
-        <div className="plano-medicao-campos">
-          <label className="campo">
-            Altura (cm)
-            <input className="campo-entrada" type="number" min={0.1} max={400} step="any" required
-              value={altura} onChange={(e) => setAltura(e.target.value)} disabled={bloqueado} />
-          </label>
-          <label className="campo">
-            Data da medição
-            <input className="campo-entrada" type="date" required max={hoje}
-              value={data} onChange={(e) => setData(e.target.value)} disabled={bloqueado} />
-          </label>
-          <button className="botao botao-primario" disabled={bloqueado} type="submit">Registrar medição</button>
-        </div>
-      )}
-    </form>
+    <section className="cartao plano-clima" aria-label="Previsão do tempo">
+      <h2 className="cartao-titulo">Previsão da semana</h2>
+      <p className="cartao-subtitulo">
+        {decimal(resumo.chuva_total_mm, 0)} mm de chuva · {resumo.temp_min_c} a {resumo.temp_max_c} °C
+        {resumo.dias_chuva_forte.length > 0 ? ` · ${resumo.dias_chuva_forte.length} com chuva forte` : ""}
+      </p>
+      <ul className="plano-clima-dias">
+        {clima.dias.map((d) => (
+          <li key={d.data} className={d.chuva_mm >= CHUVA_FORTE_MM ? "plano-clima-dia plano-clima-forte" : "plano-clima-dia"}>
+            <span className="plano-clima-data">{dataComDia(d.data)}</span>
+            <strong>{decimal(d.chuva_mm, 0)} mm</strong>
+            <span>{d.temp_min_c}–{d.temp_max_c} °C</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
 // ---------- página ----------
 
-type Envio = { tipo: "enviado" } | { tipo: "sem_telegram" } | { tipo: "nao_enviado" } | null;
-
-function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
-  const { estado, gerarPlano } = useFazenda();
-  const plano: PlanoManejo | undefined = estado.planos[fazenda.id];
+export default function Plano() {
+  const { estado, fazenda, gerarPlano } = useFazenda();
+  const plano = estado.plano;
   const [gerando, setGerando] = useState(false);
-  const [enviar, setEnviar] = useState(true);
-  const [envio, setEnvio] = useState<Envio>(null);
 
   async function gerar(): Promise<void> {
     if (gerando) return;
     setGerando(true);
-    setEnvio(null);
     await gerarPlano();
     setGerando(false);
-    if (!enviar) setEnvio({ tipo: "nao_enviado" });
-    else setEnvio(fazenda.telegram_vinculado ? { tipo: "enviado" } : { tipo: "sem_telegram" });
   }
 
   const grupos = plano ? movimentosPorDia(plano.movimentacoes) : [];
@@ -184,26 +179,18 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
           <button className="botao botao-primario" disabled={gerando} onClick={() => void gerar()}>
             {gerando ? (
               <><span className="plano-spinner" aria-hidden="true" /> Analisando piquetes…</>
-            ) : plano ? "Gerar e enviar plano agora" : "Gerar o primeiro plano"}
+            ) : "Gerar plano"}
           </button>
-          <label className="plano-checkbox">
-            <input type="checkbox" checked={enviar} disabled={gerando} onChange={(e) => setEnviar(e.target.checked)} /> enviar ao produtor
-          </label>
         </div>
       </div>
 
       {gerando ? (
         <p className="aviso-info" role="status">
-          O agente está analisando piquetes, lotes, crescimento do capim e previsão do tempo…
+          O agente está analisando os piquetes, o rebanho, as leituras de NDVI e a previsão do tempo…
         </p>
       ) : null}
-      {envio?.tipo === "enviado" ? <p className="aviso-info" role="status">Plano gerado e enviado ao produtor pelo Telegram ✓</p> : null}
-      {envio?.tipo === "nao_enviado" ? <p className="aviso-info" role="status">Plano gerado ✓ (não enviado ao produtor)</p> : null}
-      {envio?.tipo === "sem_telegram" ? (
-        <p className="aviso-alerta" role="status">
-          Plano gerado, mas não foi enviado: o produtor ainda não conectou o Telegram. Veja em <Link to="/fazenda">Fazenda</Link>.
-        </p>
-      ) : null}
+
+      <ResumoClima clima={estado.clima} />
 
       {plano && geracao ? (
         <p className="plano-periodo">
@@ -216,7 +203,7 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
       {!plano && !gerando ? (
         <section className="cartao plano-vazio">
           <h2 className="cartao-titulo">Ainda não há plano para esta fazenda</h2>
-          <p className="cartao-subtitulo">Use “Gerar o primeiro plano” para o agente analisar os piquetes e preparar os manejos.</p>
+          <p className="cartao-subtitulo">Use “Gerar plano” para o agente analisar os piquetes e preparar os manejos.</p>
         </section>
       ) : null}
 
@@ -257,24 +244,8 @@ function PlanoDaFazenda({ fazenda }: { fazenda: Fazenda }) {
               </ul>
             )}
           </section>
-
-          <section className="plano-secao" aria-label="Medições pedidas">
-            <h2 className="cartao-titulo">Medições pedidas</h2>
-            {plano.pedidos_validacao.length === 0 ? (
-              <p className="cartao-subtitulo">Nenhuma medição pedida neste plano.</p>
-            ) : (
-              plano.pedidos_validacao.map((pedido) => (
-                <Medicao key={`${plano.id}-${pedido.piquete_id}`} pedido={pedido} bloqueado={gerando} />
-              ))
-            )}
-          </section>
         </>
       ) : null}
     </div>
   );
-}
-
-export default function Plano() {
-  const { fazenda } = useFazenda();
-  return fazenda ? <PlanoDaFazenda key={fazenda.id} fazenda={fazenda} /> : null;
 }

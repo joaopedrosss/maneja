@@ -11,6 +11,8 @@ export type NomeIcone =
   | "ok"
   | "calendario"
   | "pergunta"
+  | "chuva"
+  | "painel"
   | "seta-direita";
 
 const CAMINHOS: Record<NomeIcone, string[]> = {
@@ -60,6 +62,13 @@ const CAMINHOS: Record<NomeIcone, string[]> = {
     "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3",
     "M12 17h.01",
   ],
+  chuva: [
+    "M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9",
+    "M16 14v6",
+    "M8 14v6",
+    "M12 16v6",
+  ],
+  painel: ["M18 20V10", "M12 20V4", "M6 20v-6"],
   "seta-direita": ["M5 12h14", "M12 5l7 7-7 7"],
 };
 
@@ -92,14 +101,20 @@ export function Marca() {
       height="32"
       viewBox="0 0 32 32"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
       aria-hidden="true"
     >
-      <rect x="2" y="2" width="28" height="28" rx="8" />
-      <path d="M12 2v28" />
-      <path d="M12 13h18" />
-      <rect className="marca-destaque" x="15" y="5" width="12" height="5" rx="1.5" stroke="none" />
+      <path
+        d="M4 17 L11 10 L27 13 L28 24 L10 28 Z"
+        fill="var(--cor-primaria-suave)"
+        stroke="var(--cor-primaria)"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17 4 C14.1 4 11.8 6.3 11.8 9.2 C11.8 13.2 17 19.5 17 19.5 C17 19.5 22.2 13.2 22.2 9.2 C22.2 6.3 19.9 4 17 4 Z"
+        fill="var(--cor-destaque)"
+      />
+      <circle cx="17" cy="9.2" r="2" fill="var(--cor-superficie)" />
     </svg>
   );
 }
