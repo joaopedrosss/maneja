@@ -24,6 +24,7 @@
   /* barra de navegação (superior; no celular, inferior) */
   --altura-barra: 60px;
   --altura-barra-inferior: 64px;
+  --altura-topo: var(--altura-barra);
 
   /* cartão escuro (recomendação da semana) */
   --cor-cartao-escuro: #173f50;
@@ -55,6 +56,16 @@
   --cor-confianca-media-fundo: #f8ecc4;
   --cor-confianca-baixa: #a65e20;
   --cor-confianca-baixa-fundo: #f4e3d2;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --altura-topo: calc(var(--altura-barra) + var(--altura-barra-inferior));
+  }
+}
+
+.marca-logo {
+  flex: none;
 }
 
 * {
