@@ -1,0 +1,44 @@
+{
+  "id": "5d2e8f10-1a2b-4c3d-8e9f-000000000001",
+  "fazenda_id": "9a7b6c5d-0000-4000-8000-000000000001",
+  "data_geracao": "2026-11-19T07:48:00-03:00",
+  "data_inicio": "2026-11-19",
+  "horizonte_dias": 7,
+  "movimentacoes": [
+    {
+      "id": "5d2e8f10-1a2b-4c3d-8e9f-0000000000b1",
+      "data": "2026-11-19",
+      "lote_id": "5d2e8f10-1a2b-4c3d-8e9f-0000000000c1",
+      "lote_nome": "Lote Recria",
+      "piquete_origem_id": "0b6f2a7e-5c1d-4d8e-9a10-0000000000a1",
+      "piquete_origem_nome": "Piquete Abóbora",
+      "piquete_destino_id": "0b6f2a7e-5c1d-4d8e-9a10-0000000000a3",
+      "piquete_destino_nome": "Piquete Macarrão",
+      "altura_destino_cm": 34.0,
+      "altura_entrada_alvo_cm": 30.0,
+      "dias_previstos": 4,
+      "motivo": "Piquete Abóbora chega à altura de saída amanhã; Piquete Macarrão está pronto (34 cm).",
+      "confianca": "media",
+      "motivo_confianca": "última imagem limpa há 9 dias"
+    },
+    {
+      "id": "5d2e8f10-1a2b-4c3d-8e9f-0000000000b2",
+      "data": "2026-11-21",
+      "lote_id": "5d2e8f10-1a2b-4c3d-8e9f-0000000000c2",
+      "lote_nome": "Lote Matrizes",
+      "piquete_origem_id": "1111aaaa-0000-4000-8000-0000000000f9",
+      "piquete_origem_nome": "Piquete do Açude",
+      "piquete_destino_id": "0b6f2a7e-5c1d-4d8e-9a10-0000000000a4",
+      "piquete_destino_nome": "Piquete Feijão",
+      "altura_destino_cm": 40.0,
+      "altura_entrada_alvo_cm": 35.0,
+      "dias_previstos": 3,
+      "motivo": "Exemplo de movimentação cujo piquete de origem não tem vínculo no Maneja.",
+      "confianca": "alta",
+      "motivo_confianca": "medição em campo há 2 dias"
+    }
+  ],
+  "alertas": [],
+  "pedidos_validacao": [],
+  "piquetes": []
+}

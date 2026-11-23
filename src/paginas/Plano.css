@@ -1,6 +1,4 @@
 .plano-gerar { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-.plano-checkbox { display: flex; align-items: center; gap: 8px; font-size: .85rem; }
-.plano-checkbox input { accent-color: var(--cor-primaria); }
 .plano-periodo { margin: 0; padding-bottom: 16px; border-bottom: 1px solid var(--cor-borda); font-weight: 500; }
 .plano-demonstracao { border: 1px solid var(--cor-alerta); font-weight: 600; margin: 0; }
 .plano-secao, .plano-dia { display: grid; gap: 12px; }
@@ -13,12 +11,9 @@
 .plano-movimento p { margin: 10px 0 0; }
 .plano-previsao { font-weight: 500; }
 .plano-alertas { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.plano-alerta { display: flex; align-items: flex-start; gap: 12px; margin: 0; border: 1px solid var(--cor-alerta-suave); }
+.plano-alerta { display: flex; align-items: flex-start; gap: 12px; margin: 0; border: 1px solid var(--cor-borda); border-left: 4px solid var(--cor-destaque); }
 .plano-alerta p { margin: 4px 0; }
 .plano-alerta-icone { font-size: 1.4rem; min-width: 24px; text-align: center; }
-.plano-medicao { border: 1px solid var(--cor-borda); }
-.plano-medicao-campos { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
-.plano-medicao-campos .campo { flex: 1; min-width: 140px; }
 .plano-vazio { padding-block: 40px; text-align: center; }
 .plano-vazio p { margin-top: 12px; }
 .plano-spinner { width: 16px; height: 16px; border: 2px solid var(--cor-primaria-suave); border-top-color: var(--cor-superficie); border-radius: 50%; animation: plano-girar 1s linear infinite; }
@@ -28,7 +23,6 @@
   .plano-gerar { align-items: flex-start; width: 100%; }
   .plano-gerar .botao { width: 100%; }
   .plano-movimento-topo h4 { min-width: 0; flex-basis: 100%; }
-  .plano-medicao-campos { flex-direction: column; align-items: stretch; }
 }
 .plano-alerta-icone { display: inline-flex; justify-content: center; padding-top: 2px; }
 .plano-alerta-icone .icone { width: 20px; height: 20px; }
@@ -37,7 +31,13 @@
 .plano-escolha { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--cor-borda); }
 .plano-escolha .campo-entrada { max-width: 480px; }
 .plano-movimento-feito { border-left-color: var(--cor-ocupado); }
+.plano-movimento-recusado { border-left-color: var(--cor-texto-suave); }
 .plano-feito { margin-top: 14px !important; }
 .plano-feito a { color: inherit; font-weight: 600; }
 .aviso-alerta a, .aviso-info a { color: inherit; font-weight: 600; }
 .plano-pagina > .aviso-info, .plano-pagina > .aviso-alerta { margin: 0; }
+.plano-clima-dias { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
+.plano-clima-dia { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); font-size: .85rem; }
+.plano-clima-data { color: var(--cor-texto-suave); font-size: .75rem; text-transform: capitalize; }
+.plano-clima-forte { background: var(--cor-alerta-suave); border-color: var(--cor-alerta); color: var(--cor-alerta); }
+.plano-clima-forte .plano-clima-data { color: inherit; }
